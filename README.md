@@ -137,10 +137,12 @@ doxo list
 ~~~
 
 ~~~
-APP                   STATUS     PORT       IMAGE                  UPTIME     DOMAIN
---------------------  ---------- ---------- ---------------------- ---------- ------------------------------
-app1                🟢 running   8080       caddy:alpine           2 hours    app1.local
-app2                🔴 stopped   8081       denoland/deno:latest   -          app2.local
+APP                STATUS       PORT       IMAGE                 UPTIME     MODE       DOMAIN
+----------------------------------------------------------------------------------------------
+myapp              🟢 running   8080       caddy:alpine          2h         local      myapp.local
+api                🟢 running   3000       denoland/deno:latest  5h         tailnet    api.tailnet.ts.net
+site               🔴 stopped   80         caddy:alpine          -          public     example.com
+
 ~~~
 
 ---
@@ -160,6 +162,31 @@ CREATED_AT=2024-01-01T00:00:00Z
 This is used by `expose`, `unexpose`, `restart`, `delete`, and `list` so no compose file parsing is ever needed.
 
 ---
+
+## Tailnet (tailscale)
+To access apps across your private network, Doxo can expose services using Tailscale MagicDNS (no /etc/hosts required).
+
+### Requirements
+ - Tailscale installed and running
+ - MagicDNS enabled in your Tailscale admin settings
+
+Use the --tailnet flag when exposing an app:
+
+~~~bash
+doxo expose app1 --tailnet
+~~~
+
+This will:
+
+ - Create a Caddy route for your Tailnet domain
+ - Automatically detect your Tailscale MagicDNS suffix
+ - Expose the app on your private network
+
+Example result:
+
+~~~
+app1.your-tailnet.ts.net
+~~~
 
 ## Local DNS
 

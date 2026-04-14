@@ -46,61 +46,57 @@ update_meta() {
   local key="$1"
   local value="$2"
   local meta_file="$APP_DIR/.meta"
-
   if [ ! -f "$meta_file" ]; then
     echo "❌ .meta file not found at $meta_file"
     return 1
   fi
-
-  # If key exists → replace it
   if grep -q "^${key}=" "$meta_file"; then
     sed -i "s|^${key}=.*|${key}=${value}|" "$meta_file"
   else
-    # Otherwise append
-    echo "${key}=\"${value}\"" >> "$meta_file"
+    echo "${key}=${value}" >> "$meta_file"
   fi
-
-  return 0
 }
 
 remove_meta() {
   local key="$1"
   local meta_file="$APP_DIR/.meta"
-
+  if [ ! -f "$meta_file" ]; then
+    echo "❌ .meta file not found at $meta_file"
+    return 1
+  fi
   sed -i "/^${key}=/d" "$meta_file"
 }
 
 get_local_ip() {
-  if [ "$DOXO_HOST_IP" ]; then
+  if [ -n "$DOXO_HOST_IP" ]; then
     echo "$DOXO_HOST_IP"
   else
-    echo "127.0.0.1"
+    hostname -I | awk '{print $1}'
   fi
 }
 
 add_to_hosts() {
   local domain="$1"
   local ip="${2:-$(get_local_ip)}"
-
   if grep -qE "[[:space:]]$domain$" /etc/hosts; then
-    echo "ℹ️ Hosts entry already exists for $domain"
+    echo "ℹ️  Hosts entry already exists for $domain"
     return
   fi
-
   echo "Adding $domain → $ip to /etc/hosts..."
-
-  echo "$ip $domain" | sudo tee -a /etc/hosts >/dev/null
-
+  echo "$ip $domain" | sudo tee -a /etc/hosts >/dev/null \
+    || { echo "❌ Failed to update /etc/hosts — try running with sudo"; return 1; }
   echo "✅ Hosts entry added"
 }
 
 remove_from_hosts() {
   local domain="$1"
-
   if grep -qE "[[:space:]]$domain$" /etc/hosts; then
     echo "Removing $domain from /etc/hosts..."
-    sudo sed -i "/[[:space:]]$domain$/d" /etc/hosts
+    sudo sed -i "/[[:space:]]$domain$/d" /etc/hosts \
+      || { echo "❌ Failed to update /etc/hosts — try running with sudo"; return 1; }
     echo "✅ Hosts entry removed"
+  else
+    echo "ℹ️  No hosts entry found for $domain"
   fi
 }
 

@@ -38,10 +38,30 @@ status_icon() {
 }
 
 # --- header ---
-printf "\n%-20s %-10s %-10s %-22s %-10s %-30s\n" \
-  "APP" "  STATUS" "PORT" "IMAGE" "UPTIME" "DOMAIN"
-printf "%-20s %-10s %-10s %-22s %-10s %-30s\n" \
-  "--------------------" "----------" "----------" "----------------------" "----------" "------------------------------"
+printf "\n%-${APP_W}s %-10s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
+  "APP" "STATUS" "PORT" "IMAGE" "UPTIME" "MODE" "DOMAIN"
+
+# --- seperator ---
+printf "%-${APP_W}s %-10s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
+  "--------------------" "----------" "----------" "----------------------" "----------" "----------" "------------------------------"
+
+# --- dynamic terminal width ---
+  TERM_WIDTH=$(tput cols 2>/dev/null || echo 120)
+
+  APP_W=20
+  STATUS_W=10
+  PORT_W=10
+  IMAGE_W=22
+  UPTIME_W=10
+  MODE_W=10
+
+  FIXED_WIDTH=$((APP_W + STATUS_W + PORT_W + IMAGE_W + UPTIME_W + MODE_W + 7))
+  DOMAIN_W=$((TERM_WIDTH - FIXED_WIDTH))
+
+  # --- minimum width safeguard ---
+  if [ "$DOMAIN_W" -lt 15 ]; then
+    DOMAIN_W=15
+  fi
 
 # --- loop apps ---
 for dir in "$BASE_DIR"/*/; do
@@ -56,10 +76,35 @@ for dir in "$BASE_DIR"/*/; do
   STATUS="${STATUS_MAP[$APP_NAME]:-none}"
   UPTIME="${UPTIME_MAP[$APP_NAME]:--}"
   ICON=$(status_icon "$STATUS")
+  STATUS_DISPLAY="$ICON $STATUS"
 
-  printf "%-20s %s %-8s %-10s %-22s %-10s %-30s\n" \
-    "$APP_NAME" "$ICON" "$STATUS" "$PORT" "$IMAGE" "$UPTIME" "$DOMAIN"
 
+  # --- determine mode ---
+  if [[ "$DOMAIN" == *.local ]]; then
+    MODE="local"
+  elif [[ "$DOMAIN" == *.ts.net ]]; then
+    MODE="tailnet"
+  elif [ -n "$DOMAIN" ]; then
+    MODE="public"
+  else
+    MODE="-"
+  fi
+
+  # --- domain display ---
+  if [ -z "$DOMAIN" ]; then
+    DOMAIN_DISPLAY="-"
+  else
+    if [ ${#DOMAIN} -gt "$DOMAIN_W" ]; then
+      DOMAIN_DISPLAY="${DOMAIN:0:$((DOMAIN_W-3))}..."
+    else
+      DOMAIN_DISPLAY="$DOMAIN"
+    fi
+  fi
+
+  # --- row ---
+  printf "%-${APP_W}s %-10s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
+  "$APP_NAME" "$STATUS_DISPLAY" "$PORT" "$IMAGE" "$UPTIME" "$MODE" "$DOMAIN_DISPLAY"
+  
 done
 
 echo

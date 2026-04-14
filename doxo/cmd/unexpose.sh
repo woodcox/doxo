@@ -50,14 +50,14 @@ echo "Caddy site removed"
 
 # --- remove hosts entry (only for .local) ---
 if [[ "$DOMAIN" == *.local ]]; then
+  echo "🌐 Removing: $DOMAIN"
   remove_from_hosts "$DOMAIN" || ERRORS+=("Failed to update /etc/hosts")
 fi
 
 # --- update metadata ---
-remove_meta "DOMAIN" || ERRORS+=("Failed to update .meta")
-echo "🌐 Removing: $DOMAIN"
+update_meta "DOMAIN" "-" || ERRORS+=("Failed to update .meta")
 
 # --- reload caddy ---
 reload_caddy || ERRORS+=("Caddy reload failed")
 
-report_errors "$APP_NAME" "unexposed"
+report_errors "$APP_NAME ($DOMAIN)" "unexposed"

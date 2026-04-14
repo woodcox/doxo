@@ -5,11 +5,12 @@ source "$(dirname "$0")/../lib/common.sh"
 ERRORS=()
 
 APP_NAME="${1:-}"
-DOMAIN_INPUT="${2:-}"
+ARG2="${2:-}"
+#DOMAIN_INPUT="${2:-}"
 
 # --- input ---
 if [ -z "$APP_NAME" ]; then
-  echo "Usage: doxo expose <app-name> [domain]"
+  echo "Usage: doxo expose <app-name> [--local|--tailnet|domain]"
   exit 1
 fi
 
@@ -34,12 +35,34 @@ fi
 # --- load metadata ---
 load_meta "$APP_DIR"
 
-# --- domain setup ---
-if [ -n "$DOMAIN_INPUT" ]; then
-  DOMAIN="$DOMAIN_INPUT"
-else
-  DOMAIN=$(prompt "Domain" "$DOMAIN")
-fi
+# --- determine local/tailnet/domain mode ---
+MODE="public"
+
+case "$ARG2" in
+  --local)
+    MODE="local"
+    DOMAIN="$APP_NAME.local"
+    ;;
+  --tailnet)
+    MODE="tailnet"
+
+    # detect tailnet domain
+    TAILNET_DOMAIN=$(tailscale status --json 2>/dev/null | grep -o '"MagicDNSSuffix":[^,]*' | cut -d'"' -f4)
+
+    if [ -z "$TAILNET_DOMAIN" ]; then
+      echo "❌ Could not detect Tailscale domain (is tailscale running?)"
+      exit 1
+    fi
+
+    DOMAIN="$APP_NAME.$TAILNET_DOMAIN"
+    ;;
+  "")
+    DOMAIN=$(prompt "Domain" "$DOMAIN")
+    ;;
+  *)
+    DOMAIN="$ARG2"
+    ;;
+esac
 
 echo "=== Expose App ==="
 echo "App:    $APP_NAME"
@@ -77,15 +100,18 @@ fi
 
 [ $? -ne 0 ] && ERRORS+=("Failed to write $SITE_FILE")
 
-# --- add hosts entry (only for .local domains) ---
-if [[ "$DOMAIN" == *.local ]]; then
+# --- local mode: update hosts ---
+if [ "$MODE" == "local" ]; then
   add_to_hosts "$DOMAIN" || ERRORS+=("Failed to update /etc/hosts")
-  update_meta "DOMAIN" "$DOMAIN" || ERRORS+=("Failed to update .meta")
 fi
+
+# --- update metadata with the current domain --- 
+update_meta "DOMAIN" "$DOMAIN" || ERRORS+=("Failed to update .meta")
 
 # --- reload caddy ---
 reload_caddy || ERRORS+=("Caddy reload failed")
 
+# --- result ---
 report_errors "$APP_NAME" "exposed"
 
 echo "URL:"
