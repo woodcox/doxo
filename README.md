@@ -15,8 +15,8 @@ Doxo manages apps under a consistent directory structure:
 │   ├── Caddyfile
 │   ├── sites/
 │   │   └── app1.caddy
-│   ├── data/
-│   └── config/
+│   ├── data/     # auto-created by Caddy, do not edit
+│   └── config/   # auto-created by Caddy, do not edit
 ├── app1/
 │   ├── docker-compose.yml
 │   ├── .meta

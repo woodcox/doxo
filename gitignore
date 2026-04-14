@@ -2,6 +2,10 @@
 data/
 *.meta
 
+# caddy managed
+docker/caddy/data/
+docker/caddy/config/
+
 # OS
 .DS_Store
 Thumbs.db

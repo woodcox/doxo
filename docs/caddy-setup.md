@@ -12,8 +12,8 @@ imports automatically.
 ~/docker/caddy/
 ├── docker-compose.yml
 ├── Caddyfile
-├── data/             # caddy managed, do not edit
-├── config/           # caddy managed, do not edit
+├── data/             # auto-created by Caddy, do not edit
+├── config/           # auto-created by Caddy, do not edit
 └── sites/
     ├── app1.caddy
     └── app2.caddy
