@@ -163,12 +163,47 @@ This is used by `expose`, `unexpose`, `restart`, `delete`, and `list` so no comp
 
 ## Local DNS
 
-To access apps via their `.local` domain, add entries to `/etc/hosts`:
+To access apps via their `.local` domain, Doxo can automatically manage local DNS entries for you.
+
+### Recommended (automatic)
+
+Use the --local flag when exposing an app:
+
+~~~bash
+doxo expose app1 --local
+~~~
+
+This will:
+
+ - Create a Caddy route for app1.local
+ - Automatically add an entry to /etc/hosts
+ - Map the domain to your local machine
+
+Example result:
+
+~~~
+127.0.0.1  app1.local
+~~~
+
+### Manual setup (optional fallback)
+
+If you prefer to manage DNS entries yourself, you can still add them manually:
 
 ~~~
 127.0.0.1  app1.local
 127.0.0.1  app2.local
 ~~~
+
+Edit the file:
+
+~~~bash
+sudo nano /etc/hosts
+~~~
+
+### Notes
+.local domains are not real DNS records
+They only resolve because of /etc/hosts
+For LAN or remote access, use a real domain (e.g. app.example.com)
 
 ---
 

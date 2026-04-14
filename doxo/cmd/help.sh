@@ -5,20 +5,24 @@ echo
 echo "Usage: doxo <command> [args]"
 echo
 echo "Commands:"
+echo "---------"
 echo "  create              Scaffold and start a new app"
 echo "  delete <app>        Stop and delete an app"
 echo "  list                List all apps and status"
-echo "  restart             Restart an app (docker compose restart)"
+echo "  restart <app>       Restart an app (docker compose restart)"
 echo "  expose <app>        Expose an app via Caddy route (domain/subdomain)"
 echo "  unexpose <app>      Remove public exposure of an app (removes a caddy route)"
 echo "  help                Show this help message"
 echo
 echo "Flags:"
+echo "---------"
 echo "  --version, -v               Show the doxo version number"
 echo "  restart <app> --recreate    Recreate app (docker compose down && up -d)"
+echo "  expose <app> --local        Expose using <app>.local and update /etc/hosts"
 echo "  unexpose <app> --force      Skip confirmation"
 echo
 echo "Examples:"
+echo "---------"
 echo "  doxo create myapp"
 echo "  doxo create myapp 8080 nginx:alpine"
 echo
@@ -30,6 +34,7 @@ echo
 echo "  doxo expose myapp"
 echo "  doxo expose myapp myapp.local"
 echo "  doxo expose myapp app.example.com"
+echo "  doxo expose myapp --local"
 echo
 echo "  doxo unexpose myapp"
 echo

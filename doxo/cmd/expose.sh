@@ -77,6 +77,13 @@ fi
 
 [ $? -ne 0 ] && ERRORS+=("Failed to write $SITE_FILE")
 
+# --- add hosts entry (only for .local domains) ---
+if [[ "$DOMAIN" == *.local ]]; then
+  add_to_hosts "$DOMAIN" || ERRORS+=("Failed to update /etc/hosts")
+  update_meta "DOMAIN" "$DOMAIN" || ERRORS+=("Failed to update .meta")
+fi
+
+# --- reload caddy ---
 reload_caddy || ERRORS+=("Caddy reload failed")
 
 report_errors "$APP_NAME" "exposed"

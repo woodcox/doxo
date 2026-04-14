@@ -26,7 +26,7 @@ load_meta "$APP_DIR"
 
 echo "=== Unexpose App ==="
 echo "App:    $APP_NAME"
-echo "Domain: $DOMAIN"
+echo "Domain: ${DOMAIN--}"
 echo
 
 # --- check existence ---
@@ -43,11 +43,21 @@ if [ "$FORCE" != "--force" ]; then
   fi
 fi
 
-# --- remove site ---
+# --- remove caddy site ---
 echo "Removing Caddy site..."
 rm "$SITE_FILE" || ERRORS+=("Failed to remove $SITE_FILE")
 echo "Caddy site removed"
 
+# --- remove hosts entry (only for .local) ---
+if [[ "$DOMAIN" == *.local ]]; then
+  remove_from_hosts "$DOMAIN" || ERRORS+=("Failed to update /etc/hosts")
+fi
+
+# --- update metadata ---
+remove_meta "DOMAIN" || ERRORS+=("Failed to update .meta")
+echo "🌐 Removing: $DOMAIN"
+
+# --- reload caddy ---
 reload_caddy || ERRORS+=("Caddy reload failed")
 
 report_errors "$APP_NAME" "unexposed"
