@@ -1,0 +1,7 @@
+# app data
+data/
+*.meta
+
+# OS
+.DS_Store
+Thumbs.db

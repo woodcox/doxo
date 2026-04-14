@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+DOXO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+CMD_DIR="$DOXO_DIR/cmd"
+
+case "$1" in
+  --version|-v)
+    echo "doxo $(cat "$DOXO_DIR/VERSION")"
+    ;;
+  create|delete|list|restart|expose|unexpose|help)
+    COMMAND="$1"
+    shift
+    "$CMD_DIR/$COMMAND.sh" "$@"
+    ;;
+  ""|--help|-h)
+    "$CMD_DIR/help.sh"
+    ;;
+  *)
+    echo "❌ Unknown command: $1"
+    echo
+    "$CMD_DIR/help.sh"
+    exit 1
+    ;;
+esac
