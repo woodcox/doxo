@@ -71,7 +71,7 @@ doxo create <app-name>
 doxo create <app-name> <port>
 ~~~
 
-Prompts for app name, external port, and image type. Available image types:
+Prompts for app name, port, and image type. Available image types:
 
 | Option | Image | Internal port |
 |--------|-------|---------------|
@@ -125,7 +125,7 @@ doxo restart <app-name>
 doxo restart <app-name> --recreate
 ~~~
 
-`--recreate` does a full `down`/`up` cycle to pick up any changes to `docker-compose.yml`.
+`--recreate` does a full `docker compose down && up -d` cycle to pick up any changes to `docker-compose.yml`.
 
 ---
 
@@ -192,7 +192,7 @@ doxo/
 └── uninstall.sh
 ~~~
 
-# Create a release
+## Create a release
 ~~~sh
 echo "0.2.0" > VERSION
 git add VERSION
