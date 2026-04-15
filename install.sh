@@ -17,7 +17,8 @@ success() { echo -e "\033[0;32m[OK]\033[0m $1"; }
 error()   { echo -e "\033[0;31m[ERROR]\033[0m $1" >&2; }
 
 yes_no() {
-  read -rp "$1 (y/n): " yn
+  local message="$1"
+  read -rp "$message (y/n): " yn
   [[ "$yn" =~ ^[Yy]$ ]]
 }
 
@@ -283,10 +284,7 @@ ensure_docker() {
 }
 
 caddy_compose_running() {
-  docker ps \
-    --filter "label=com.docker.compose.project=caddy" \
-    --format '{{.Names}}' \
-    | grep -q .
+  docker ps --format '{{.Names}}' | grep -q caddy
 }
 
 # check for caddy container
@@ -298,14 +296,14 @@ ensure_caddy() {
   fi
 
   if caddy_compose_running; then
-    info "Caddy is running (Compose detected)"
+    info "Caddy is running"
     return 0
   fi
 
   if yes_no "Install Caddy now?"; then
     install_caddy
-  #else
-  #  info "Skipping Caddy setup"
+  else
+    info "Skipping Caddy setup"
   fi
 }
 
@@ -329,13 +327,13 @@ info "Then run: doxo help"
 echo
 
 # --- create test app ---
-echo
-if yes_no "Do you want to create a test app (hello-world.local)?"; then
-  info "Creating test app via doxo..."
-
-  doxo create hello-world --local
-
-  success "Test app created!"
-  
-  info "Then visit: http://hello-world.local"
-fi
+#echo
+#if yes_no "Do you want to create a test app (hello-world.local)?"; then
+#  info "Creating test app via doxo..."
+#
+#  doxo create hello-world --local
+#
+#  success "Test app created!"
+#  
+#  info "Then visit: http://hello-world.local"
+#fi
