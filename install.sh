@@ -282,6 +282,13 @@ ensure_docker() {
   fi
 }
 
+caddy_compose_running() {
+  docker ps \
+    --filter "label=com.docker.compose.project=caddy" \
+    --format '{{.Names}}' \
+    | grep -q .
+}
+
 # check for caddy container
 ensure_caddy() {
   if [[ "$REPAIR_MODE" == "1" ]]; then
@@ -290,13 +297,8 @@ ensure_caddy() {
     return 0
   fi
 
-  if exists_container caddy && exists_network caddy && exists_dir "$HOME/docker/caddy"; then
-    info "Caddy is already set up"
-    return 0
-  fi
-
-  if docker ps --format '{{.Names}}' | grep -q '^caddy$'; then
-    info "Caddy is running"
+  if caddy_compose_running; then
+    info "Caddy Compose stack is running"
     return 0
   fi
 
@@ -318,10 +320,10 @@ echo "======================================="
 success "Doxo installation complete!"
 echo "======================================="
 echo
-info "Make sure $BIN_DIR is in your PATH:"
-echo "   export PATH=\"\$HOME/.local/bin:\$PATH\""
+info "Make sure $BIN_DIR is in your PATH by adding the following to your ~/.bashrc or ~/.zshrc to make it permanent:"
+info "export PATH=\"\$HOME/.local/bin:\$PATH\""
 echo
-info "Add the above to your ~/.bashrc or ~/.zshrc to make it permanent"
+info "To make this change, you need to run: nano ~/.bashrc"
 echo
 info "Then run: doxo help"
 echo
