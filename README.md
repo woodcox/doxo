@@ -2,11 +2,44 @@
 WIP
 A simple CLI that combines Docker and Caddy to create and manage consistent dockerized apps.
 
----
 
-## Structure
+## Requirements
 
-Doxo manages apps under a consistent directory structure:
+ - Server: Any modern Linux server 
+ - Domain: A domain or subdomain pointing to your server for secure API access
+ - Tailscale (optional) for secure networking
+
+
+## Install
+
+SSH into your server and run the install script:
+
+~~~bash
+curl -fsSL https://raw.githubusercontent.com/woodcox/doxo/main/install.sh | bash
+~~~
+
+This installs:
+ - Docker
+ - Docker compose
+ - Docker image of Caddy
+ - Doxo
+
+Doxo assumes Caddy is running as a Docker container on a shared `caddy` network → See [docs/caddy-setup.md](docs/caddy-setup.md)
+
+## Architecture
+~~~
+Internet / Tailscale / Local
+        ↓
+Caddy Reverse Proxy
+        ↓
+Docker containers
+┌───────────────┬───────────────┬───────────────┐
+│  Caddy        │    app1       │    app2       │
+│               │   :8080       │   :5000       │
+└───────────────┴───────────────┴───────────────┘
+~~~
+
+Doxo manages the apps under a consistent directory structure:
 
 ~~~
 ~/docker/
@@ -29,36 +62,6 @@ Doxo manages apps under a consistent directory structure:
 
 Each app gets its own directory with a `docker-compose.yml`, a `.meta` file, and a `data/` directory. Caddy route snippets are stored in `~/docker/caddy/sites/`.
 
----
-
-## Requirements
-
-- Docker
-- Docker Compose
-- Caddy running as a Docker container on the `caddy` network
-  → See [docs/caddy-setup.md](docs/caddy-setup.md)
-
----
-
-## Install
-
-Clone the repo and run the install script:
-
-~~~bash
-curl -fsSL https://raw.githubusercontent.com/woodcox/doxo/main/install.sh | bash
-~~~
-
----
-
-## Uninstall
-
-~~~bash
-curl -fsSL https://raw.githubusercontent.com/woodcox/doxo/main/uninstall.sh | bash
-~~~
-
-This removes the symlink only. To remove the doxo files entirely run `rm -rf ~/doxo`.
-
----
 
 ## Commands
 
@@ -82,8 +85,6 @@ Prompts for app name, port, and image type. Available image types:
 - **Caddy static** — mounts `data/` to `/srv`, scaffolds `data/index.html`, generates a `file_server` Caddy snippet
 - **Deno server** — mounts `.` to `/app`, scaffolds `main.ts` with a `/health` endpoint, generates a `reverse_proxy` Caddy snippet
 
----
-
 ### `doxo delete`
 Stop and remove an app and its Caddy route.
 
@@ -92,8 +93,6 @@ doxo delete <app-name>
 ~~~
 
 Stops containers, removes the app directory, removes the Caddy snippet, and reloads Caddy.
-
----
 
 ### `doxo expose`
 Add or update a Caddy route for an existing app.
@@ -105,7 +104,6 @@ doxo expose <app-name> <domain>
 
 Reads app config from `.meta` — no compose file parsing needed.
 
----
 
 ### `doxo unexpose`
 Remove the Caddy route for an app without deleting the app.
@@ -114,8 +112,6 @@ Remove the Caddy route for an app without deleting the app.
 doxo unexpose <app-name>
 doxo unexpose <app-name> --force
 ~~~
-
----
 
 ### `doxo restart`
 Restart an app's container.
@@ -126,8 +122,6 @@ doxo restart <app-name> --recreate
 ~~~
 
 `--recreate` does a full `docker compose down && up -d` cycle to pick up any changes to `docker-compose.yml`.
-
----
 
 ### `doxo list`
 List all apps and their current status.
@@ -145,7 +139,13 @@ site               🔴 stopped   80         caddy:alpine          -          pu
 
 ~~~
 
----
+### Uninstall
+
+~~~bash
+doxo uninstall
+~~~
+
+This removes the symlink only. To remove the doxo files entirely run `rm -rf ~/doxo`.
 
 ## The .meta file
 
@@ -247,11 +247,11 @@ doxo/
 │   ├── unexpose.sh
 │   ├── list.sh
 │   ├── restart.sh
-│   └── help.sh
+│   ├── help.sh
+│   └── uninstall.sh
 ├── lib/
 │   └── common.sh     # shared helpers
-├── install.sh
-└── uninstall.sh
+└── install.sh
 ~~~
 
 ## Create a release

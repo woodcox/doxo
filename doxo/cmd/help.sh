@@ -13,6 +13,7 @@ echo "  restart <app>       Restart an app (docker compose restart)"
 echo "  expose <app>        Expose an app via Caddy route (domain/subdomain)"
 echo "  unexpose <app>      Remove public exposure of an app (removes a caddy route)"
 echo "  help                Show this help message"
+echo "  uninstall           Uninstall Doxo"
 echo
 echo "Flags:"
 echo "---------"
