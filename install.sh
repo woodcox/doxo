@@ -5,6 +5,7 @@ BIN_DIR="$HOME/.local/bin"
 LINK="$BIN_DIR/doxo"
 REPO="https://github.com/woodcox/doxo.git"
 REPAIR_MODE=0
+DOXO_NONINTERACTIVE="${DOXO_NONINTERACTIVE:-0}"
 
 if [[ "${1:-}" == "--repair" ]]; then
   info "Running repair mode..."
@@ -17,8 +18,23 @@ success() { echo -e "\033[0;32m[OK]\033[0m $1"; }
 error()   { echo -e "\033[0;31m[ERROR]\033[0m $1" >&2; }
 
 yes_no() {
-  local message="$1"
-  read -rp "$message (y/n): " yn
+  local prompt="$1"
+  local yn
+
+  if [[ "DOXO_NONINTERACTIVE" == "1" ]]; then
+    info "Non-interactive mode → skipping: $prompt"
+    return 1
+  fi
+
+  # no TTY mode
+  if [[ ! -t 0 ]]; then
+    info "No TTY → skipping: $prompt"
+    return 1
+  fi
+
+  read -rp "$prompt (y/n): " yn || return 1
+
+  # handle empty input explicitly
   [[ "$yn" =~ ^[Yy]$ ]]
 }
 
