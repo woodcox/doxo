@@ -275,3 +275,7 @@ info "Add the above to your ~/.bashrc or ~/.zshrc to make it permanent"
 echo
 info "Then run: doxo help"
 echo
+info "If you see the help menu, now try running: doxo create hello-world --local"
+echo
+info "Them open a browser and go to: https://hello-world.local
+echo

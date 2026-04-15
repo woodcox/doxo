@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+echo "🔧 Checking script permissions..."
+
+# Ensure scripts are executable
+for dir in cmd lib bin; do
+  [ -d "$dir" ] || continue
+  find "$dir" -type f -name "*.sh" -exec chmod 755 {} \; 2>/dev/null
+done
+
+# Main CLI entrypoint (if exists)
+[ -f "bin/doxo" ] && chmod 755 doxo
+[ -f "install.sh" ] && chmod 755 install.sh
+
+echo "✅ Permissions enforced"
+exit 0

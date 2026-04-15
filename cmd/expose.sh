@@ -6,7 +6,6 @@ ERRORS=()
 
 APP_NAME="${1:-}"
 ARG2="${2:-}"
-#DOMAIN_INPUT="${2:-}"
 
 # --- input ---
 if [ -z "$APP_NAME" ]; then
@@ -14,10 +13,7 @@ if [ -z "$APP_NAME" ]; then
   exit 1
 fi
 
-if ! validate_name "$APP_NAME"; then
-  echo "❌ Invalid app name"
-  exit 1
-fi
+
 
 APP_DIR="$BASE_DIR/$APP_NAME"
 SITE_FILE="$SITES_DIR/$APP_NAME.caddy"
