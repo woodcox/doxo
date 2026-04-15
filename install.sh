@@ -298,14 +298,14 @@ ensure_caddy() {
   fi
 
   if caddy_compose_running; then
-    info "Caddy Compose stack is running"
+    info "Caddy is running (Compose detected)"
     return 0
   fi
 
   if yes_no "Install Caddy now?"; then
     install_caddy
-  else
-    info "Skipping Caddy setup"
+  #else
+  #  info "Skipping Caddy setup"
   fi
 }
 
