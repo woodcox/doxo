@@ -139,7 +139,21 @@ site               🔴 stopped   80         caddy:alpine          -          pu
 
 ~~~
 
-### Uninstall
+### `doxo open`
+Opens the app in browers.
+
+~~~bash
+doxo open <app-name>
+~~~
+
+### `doxo doctor`
+Checks if docker, caddy and doxo is running.
+
+~~~bash
+doxo doctor
+~~~
+
+### `doxo uninstall`
 
 ~~~bash
 doxo uninstall
