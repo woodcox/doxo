@@ -62,10 +62,21 @@ Doxo manages the apps under a consistent directory structure:
 
 Each app gets its own directory with a `docker-compose.yml`, a `.meta` file, and a `data/` directory. Caddy route snippets are stored in `~/docker/caddy/sites/`.
 
+### Lazydocker
+Use Doxo in conjuction with Lazydocker where Doxo is responsible for deployment cli:
+ - app file management
+ - local and public deployment
+ - 
+
+And [lazydocker](https://github.com/jesseduffield/lazydocker/) for runtime operations like:
+ - container status
+ - logs
+ - restart/stop/start
+ - debugging runtime issues
 
 ## Commands
 
-### `doxo create`
+### Create
 Scaffold and start a new app.
 
 ~~~bash
@@ -85,7 +96,7 @@ Prompts for app name, port, and image type. Available image types:
 - **Caddy static** — mounts `data/` to `/srv`, scaffolds `data/index.html`, generates a `file_server` Caddy snippet
 - **Deno server** — mounts `.` to `/app`, scaffolds `main.ts` with a `/health` endpoint, generates a `reverse_proxy` Caddy snippet
 
-### `doxo delete`
+### Delete
 Stop and remove an app and its Caddy route.
 
 ~~~bash
@@ -94,7 +105,7 @@ doxo delete <app-name>
 
 Stops containers, removes the app directory, removes the Caddy snippet, and reloads Caddy.
 
-### `doxo expose`
+### Expose
 Add or update a Caddy route for an existing app.
 
 ~~~bash
@@ -105,7 +116,7 @@ doxo expose <app-name> <domain>
 Reads app config from `.meta` — no compose file parsing needed.
 
 
-### `doxo unexpose`
+### Unexpose
 Remove the Caddy route for an app without deleting the app.
 
 ~~~bash
@@ -113,7 +124,7 @@ doxo unexpose <app-name>
 doxo unexpose <app-name> --force
 ~~~
 
-### `doxo restart`
+### Restart
 Restart an app's container.
 
 ~~~bash
@@ -123,7 +134,7 @@ doxo restart <app-name> --recreate
 
 `--recreate` does a full `docker compose down && up -d` cycle to pick up any changes to `docker-compose.yml`.
 
-### `doxo list`
+### List
 List all apps and their current status.
 
 ~~~bash
@@ -139,21 +150,21 @@ site               🔴 stopped   80         caddy:alpine          -          pu
 
 ~~~
 
-### `doxo open`
+### Open
 Opens the app in browers.
 
 ~~~bash
 doxo open <app-name>
 ~~~
 
-### `doxo doctor`
+### Doctor
 Checks if docker, caddy and doxo is running.
 
 ~~~bash
 doxo doctor
 ~~~
 
-### `doxo uninstall`
+### Uninstall
 
 ~~~bash
 doxo uninstall
@@ -178,7 +189,7 @@ This is used by `expose`, `unexpose`, `restart`, `delete`, and `list` so no comp
 ---
 
 ## Tailnet (tailscale)
-To access apps across your private network, Doxo can expose services using Tailscale MagicDNS (no /etc/hosts required).
+To access apps across your private network, Doxo can expose services using Tailscale MagicDNS (no /etc/hosts required). You must install [tailscale](https://tailscale.com/) seperately.
 
 ### Requirements
  - Tailscale installed and running
@@ -228,7 +239,7 @@ Example result:
 
 ### Manual setup (optional fallback)
 
-If you prefer to manage DNS entries yourself, you can still add them manually:
+If you prefer to manage local DNS entries yourself, you can still add them manually:
 
 ~~~
 127.0.0.1  app1.local
@@ -246,8 +257,6 @@ sudo nano /etc/hosts
 They only resolve because of /etc/hosts
 For LAN or remote access, use a real domain (e.g. app.example.com)
 
----
-
 ## Project structure
 
 ~~~
@@ -257,11 +266,13 @@ doxo/
 ├── cmd/
 │   ├── create.sh
 │   ├── delete.sh
-│   ├── expose.sh
-│   ├── unexpose.sh
 │   ├── list.sh
 │   ├── restart.sh
+│   ├── expose.sh
+│   ├── unexpose.sh
 │   ├── help.sh
+│   ├── open.sh
+│   ├── doctor.sh
 │   └── uninstall.sh
 ├── lib/
 │   └── common.sh     # shared helpers

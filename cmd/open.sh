@@ -2,8 +2,6 @@
 
 source "$(dirname "$0")/../lib/common.sh"
 
-ERRORS=()
-
 APP_NAME="$1"
 
 # --- input ---
@@ -29,11 +27,17 @@ load_meta "$APP_DIR"
 
 # --- determine URL ---
 if [ -n "$DOMAIN" ] && [ "$DOMAIN" != "-" ]; then
-  URL="https://$DOMAIN"
-fi
-
-if [ -z "$URL" ]; then
-  echo "❌ Could not determine URL"
+  # use http for .local domains, https for real domains
+  if [[ "$DOMAIN" == *.local ]]; then
+    URL="http://$DOMAIN"
+  else
+    URL="https://$DOMAIN"
+  fi
+elif [ -n "$PORT" ] && [ "$PORT" != "-" ]; then
+  # fall back to port-based URL
+  URL="http://$(get_local_ip):$PORT"
+else
+  echo "❌ No domain or port found for '$APP_NAME'"
   exit 1
 fi
 
@@ -47,6 +51,3 @@ elif command -v open >/dev/null 2>&1; then
 else
   echo "👉 Open manually: $URL"
 fi
-
-# --- result ---
-report_errors "$APP_NAME" "opened"

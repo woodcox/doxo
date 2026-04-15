@@ -14,7 +14,7 @@ echo "  expose <app>        Expose an app via Caddy route (domain/subdomain)"
 echo "  unexpose <app>      Remove public exposure of an app (removes a caddy route)"
 echo "  help                Show this help message"
 echo "  open <app>          Open the app in a browser"
-echo "  doctor              Checks if docker, caddy and doxo is running"
+echo "  doctor              Check doxo dependencies and configuration"
 echo "  uninstall           Uninstall Doxo"
 echo
 echo "Flags:"
@@ -31,8 +31,6 @@ echo "---------"
 echo "  doxo create myapp"
 echo "  doxo create myapp 8080 nginx:alpine"
 echo
-echo "  doxo list"
-echo
 echo "  doxo restart myapp"
 echo "  doxo restart myapp --recreate"
 echo
@@ -40,8 +38,5 @@ echo "  doxo expose myapp"
 echo "  doxo expose myapp myapp.local"
 echo "  doxo expose myapp app.example.com"
 echo "  doxo expose myapp --local"
-echo
-echo "  doxo unexpose myapp"
-echo
-echo "  doxo delete myapp"
+echo "  doxo expose myapp --tailnet"
 echo
