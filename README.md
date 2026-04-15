@@ -271,7 +271,6 @@ doxo/
 ## Create a release
 ~~~sh
 echo "0.2.0" > VERSION
-git add VERSION
 git commit -m "release 0.2.0"
 git tag v0.2.0
 git push origin main --tags
