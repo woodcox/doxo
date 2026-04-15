@@ -295,6 +295,11 @@ ensure_caddy() {
     return 0
   fi
 
+  if docker ps --format '{{.Names}}' | grep -q '^caddy$'; then
+    info "Caddy is running"
+    return 0
+  fi
+
   if yes_no "Install Caddy now?"; then
     install_caddy
   else
