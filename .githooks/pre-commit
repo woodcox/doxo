@@ -7,14 +7,12 @@ for dir in cmd lib bin; do
   [ -d "$dir" ] || continue
 
   while IFS= read -r file; do
-    perms=$(stat -c "%a" "$file" 2>/dev/null)
-
-    if [ "$perms" != "755" ]; then
-      echo "⚠️ Fixing permissions: $file ($perms → 755)"
-      chmod 755 "$file"
+    if [[ ! -x "$file" ]]; then
+      echo "⚠️ Making executable: $file"
+      chmod +x "$file"
+      git update-index --chmod=+x "$file"
     fi
-
-  done < <(find "$dir" -type f -name "*.sh" 2>/dev/null)
+  done < <(find "$dir" -type f -name "*.sh")
 
 done
 
