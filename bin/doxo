@@ -13,7 +13,7 @@ case "$1" in
   --version|-v)
     echo "doxo $(cat "$DOXO_DIR/VERSION")"
     ;;
-  create|delete|list|restart|expose|unexpose|open|help|doctor|uninstall)
+  create|delete|list|restart|expose|unexpose|open|help|doctor|install|uninstall)
     COMMAND="$1"
     shift
     "$CMD_DIR/$COMMAND.sh" "$@"

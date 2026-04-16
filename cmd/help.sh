@@ -15,6 +15,7 @@ echo "  unexpose <app>      Remove public exposure of an app (removes a caddy ro
 echo "  help                Show this help message"
 echo "  open <app>          Open the app in a browser"
 echo "  doctor              Check doxo dependencies and configuration"
+echo "  install             Install Doxo"
 echo "  uninstall           Uninstall Doxo"
 echo
 echo "Flags:"
@@ -25,6 +26,7 @@ echo "  expose <app> --local        Expose locally using /etc/hosts"
 echo "  expose <app> --tailnet      Expose via Tailscale MagicDNS"
 echo "  expose <app> <domain>       Expose publicly"
 echo "  unexpose <app> --force      Skip confirmation"
+echo "  install --repair            Skip confirmation"
 echo
 echo "Examples:"
 echo "---------"
