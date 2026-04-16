@@ -32,12 +32,10 @@ if [ -L "$LINK" ]; then
   info "Updating existing symlink..."
 fi
 ln -sf "$DOXO_DIR/bin/doxo" "$LINK" || error "Failed to create symlink at $LINK"
-success "doxo available at $LINK"
 
 # --- make available in current shell ---
 export PATH="$HOME/.local/bin:$PATH"
-
-success "doxo downloaded → $LINK"
+success "doxo available at $LINK"
 
 # --- hand off to doxo install ---
 info "Running doxo install..."
