@@ -7,11 +7,6 @@ REPO="https://github.com/woodcox/doxo.git"
 REPAIR_MODE=0
 DOXO_NONINTERACTIVE="${DOXO_NONINTERACTIVE:-0}"
 
-if [[ "${1:-}" == "--repair" ]]; then
-  info "Running repair mode..."
-  REPAIR_MODE=1
-fi
-
 # --- helpers ---
 info()    { echo -e "\033[0;34m[INFO]\033[0m $1"; }
 success() { echo -e "\033[0;32m[OK]\033[0m $1"; }
@@ -23,8 +18,7 @@ yes_no() {
 
   # non-interactive → assume YES
   if [[ "$DOXO_NONINTERACTIVE" == "1" ]]; then
-    info "Running in non-interactive mode (curl/bash)"
-    info "Non-interactive mode → defaulting YES: $prompt"
+    info "Running non-interactive mode (curl/bash) → defaulting YES: $prompt"
     return 0
   fi
 
@@ -48,6 +42,16 @@ exists_network() {
 exists_dir() {
   [ -d "$1" ]
 }
+
+caddy_compose_running() {
+  docker ps --format '{{.Names}}' | grep -q caddy
+}
+
+# --- parse args ---
+if [[ "${1:-}" == "--repair" ]]; then
+  info "Running repair mode..."
+  REPAIR_MODE=1
+fi
 
 # --- install docker ---
 install_docker() {
@@ -101,7 +105,7 @@ install_docker() {
     info "Added $SUDO_USER to docker group — log out and back in for this to take effect"
   fi
 
-  if command -v docker >/dev/null 2>&1; then
+  if exists_cmd docker; then
     success "Docker installed: $(docker --version)"
   else
     error "Docker installation completed but 'docker' command not found"
@@ -120,7 +124,7 @@ _install_docker_debian_ubuntu() {
   chmod a+r /etc/apt/keyrings/docker.gpg
 
   CODENAME="$VERSION_CODENAME"
-  if [ -z "$CODENAME" ] && command -v lsb_release >/dev/null 2>&1; then
+  if [ -z "$CODENAME" ] && exists_cmd lsb_release; then
     CODENAME=$(lsb_release -cs)
   fi
   [ -z "$CODENAME" ] && { error "Cannot determine codename"; return 1; }
@@ -136,7 +140,7 @@ https://download.docker.com/linux/$DISTRO $CODENAME stable" \
 }
 
 _install_docker_centos_rhel() {
-  PKG_MGR=$(command -v dnf || command -v yum)
+  PKG_MGR=$(exists_cmd dnf || exists_cmd yum)
   [ -z "$PKG_MGR" ] && { error "Neither dnf nor yum found"; return 1; }
 
   $PKG_MGR remove -y docker docker-client docker-client-latest docker-common \
@@ -174,10 +178,20 @@ _install_docker_alpine() {
 install_caddy() {
   info "Setting up Caddy..."
 
-  # wait for docker (to prevent race conditions)
+  # warn if system caddy is running
+  if systemctl is-active --quiet caddy 2>/dev/null; then
+    error "A system-installed Caddy is already running — port conflict on 80/443."
+    info "Stop it first: sudo systemctl stop caddy && sudo systemctl disable caddy"
+    return 1
+  fi
+
+  # wait for docker daemon
+  local retries=0
   until docker info >/dev/null 2>&1; do
-    info "Waiting for Docker to start..."
+    info "Waiting for Docker daemon..."
     sleep 2
+    retries=$((retries + 1))
+    [ "$retries" -ge 10 ] && { error "Docker daemon did not start in time"; return 1; }
   done
 
   if ! exists_network caddy; then
@@ -186,10 +200,11 @@ install_caddy() {
   else
     info "Docker network 'caddy' already exists"
   fi
-
+  
+  # only create sites/ — data/ and config/ are caddy-managed
   mkdir -p "$HOME/docker/caddy/sites"
-  mkdir -p "$HOME/docker/caddy/data"
-  mkdir -p "$HOME/docker/caddy/config"
+  #mkdir -p "$HOME/docker/caddy/data"
+  #mkdir -p "$HOME/docker/caddy/config"
 
   success "Created $HOME/docker/caddy/sites"
 
@@ -257,9 +272,9 @@ install_doxo() {
 
   if [ -d "$DOXO_DIR/.git" ]; then
     info "Updating existing doxo installation..."
-    git -C "$DOXO_DIR" pull
+    git -C "$DOXO_DIR" pull || { error "git pull failed"; return 1; }
   else
-    git clone "$REPO" "$DOXO_DIR"
+    git clone "$REPO" "$DOXO_DIR" || { error "git clone failed — check your internet connection"; return 1; }
   fi
 
   mkdir -p "$BIN_DIR"
@@ -269,53 +284,6 @@ install_doxo() {
   [ -L "$LINK" ] && rm "$LINK"
   ln -sf "$DOXO_DIR/bin/doxo" "$LINK"
   success "doxo installed → $LINK"
-}
-
-# --- main ---
-echo "=== Doxo Installer ==="
-echo
-
-# check for docker
-ensure_docker() {
-  if [[ "$REPAIR_MODE" == "1" ]]; then
-    info "Repair mode: re-checking Docker..."
-  fi
-
-  if exists_cmd docker && docker info >/dev/null 2>&1 && [[ "$REPAIR_MODE" == "0" ]]; then
-    info "Docker already installed: $(docker --version)"
-    return 0
-  fi
-
-  if yes_no "Docker is not installed. Install it now?"; then
-    install_docker || { error "Docker installation failed"; exit 1; }
-  else
-    error "Docker is required to run doxo"
-    exit 1
-  fi
-}
-
-caddy_compose_running() {
-  docker ps --format '{{.Names}}' | grep -q caddy
-}
-
-# check for caddy container
-ensure_caddy() {
-  if [[ "$REPAIR_MODE" == "1" ]]; then
-    info "Repair mode: rebuilding Caddy..."
-    install_caddy
-    return 0
-  fi
-
-  if caddy_compose_running; then
-    info "Caddy is running"
-    return 0
-  fi
-
-  if yes_no "Install Caddy now?"; then
-    install_caddy
-  else
-    info "Skipping Caddy setup"
-  fi
 }
 
 ensure_path() {
@@ -336,16 +304,57 @@ ensure_path() {
   echo "" >> "$shell_rc"
   echo "# Added by doxo installer" >> "$shell_rc"
   echo "$path_line" >> "$shell_rc"
-
   success "Added ~/.local/bin to PATH in $shell_rc"
-
   info "Run: 'source $shell_rc' or restart your terminal to apply changes"
 }
 
-# installer
+# --- ensure docker ---
+ensure_docker() {
+  if [[ "$REPAIR_MODE" == "1" ]]; then
+    info "Repair mode: re-checking Docker..."
+  elif exists_cmd docker && docker info >/dev/null 2>&1; then
+    info "Docker already installed: $(docker --version)"
+    return 0
+  fi
+
+  if yes_no "Docker is not installed. Install it now?"; then
+    install_docker || { error "Docker installation failed"; exit 1; }
+  else
+    error "Docker is required to run doxo"
+    exit 1
+  fi
+}
+
+# --- ensure caddy ---
+ensure_caddy() {
+  if [[ "$REPAIR_MODE" == "1" ]]; then
+    info "Repair mode: rebuilding Caddy..."
+    install_caddy
+    return 0
+  fi
+
+  if caddy_compose_running; then
+    info "Caddy is running"
+    return 0
+  fi
+
+  if yes_no "Caddy is not running. Install Caddy now?"; then
+    #TODO - FIX THIS
+    info "Install Caddy? prompt on a machine that already has something on port 80/443"
+    install_caddy
+  else
+    info "Skipping Caddy setup — see docs/caddy-setup.md"
+  fi
+}
+
+# --- main installer ---
+echo "=== Doxo Installer ==="
+echo
+
 ensure_docker
 ensure_caddy
 install_doxo
+ensure_path
 
 # --- post install ---
 echo
@@ -353,9 +362,7 @@ echo "======================================="
 success "Doxo installation complete!"
 echo "======================================="
 echo
-ensure_path
-echo
-info "Then run: doxo help"
+info "Run: doxo help"
 echo
 
 # --- create test app ---
