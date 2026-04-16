@@ -9,12 +9,13 @@ APP_NAME="${1:-}"
 PORT="${2:-}"
 IMAGE="${3:-}"
 INTERNAL_PORT=""
-ADD_CADDY=false
+ADD_CADDY=true
 
+# --- parse args ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --local)
-      ADD_CADDY=true
+    --no-caddy)
+      ADD_CADDY=false
       shift
       ;;
     --port)
@@ -83,8 +84,12 @@ if [ -z "$IMAGE" ]; then
   esac
 fi
 
-if yes_no "Add Caddy route?"; then
-  ADD_CADDY=true
+# --- caddy prompt only if not already decided ---
+if $ADD_CADDY; then
+  echo "ℹ️  Caddy route will be created for $APP_NAME.local"
+  echo "   Use --no-caddy to skip"
+else
+  echo "ℹ️  Skipping Caddy route (--no-caddy)"
 fi
 
 APP_DIR="$BASE_DIR/$APP_NAME"
@@ -123,7 +128,6 @@ if [ ! -f "$APP_DIR/docker-compose.yml" ]; then
   fi
 
   cat <<EOF > "$APP_DIR/docker-compose.yml"
-version: "3.8"
 
 services:
   $APP_NAME:
@@ -207,6 +211,9 @@ EOF
     fi
 
     [ $? -ne 0 ] && ERRORS+=("Failed to write $SITE_FILE")
+
+    # add to /etc/hosts
+    add_to_hosts "$DOMAIN" || ERRORS+=("Failed to update /etc/hosts")
 
     reload_caddy || ERRORS+=("Caddy reload failed")
   else
