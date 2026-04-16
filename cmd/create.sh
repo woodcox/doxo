@@ -9,6 +9,30 @@ APP_NAME="${1:-}"
 PORT="${2:-}"
 IMAGE="${3:-}"
 INTERNAL_PORT=""
+ADD_CADDY=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --local)
+      ADD_CADDY=true
+      shift
+      ;;
+    --port)
+      PORT="$2"
+      shift 2
+      ;;
+    --image)
+      IMAGE="$2"
+      shift 2
+      ;;
+    *)
+      if [ -z "$APP_NAME" ]; then
+        APP_NAME="$1"
+      fi
+      shift
+      ;;
+  esac
+done
 
 echo "=== Create Docker App ==="
 
@@ -59,7 +83,6 @@ if [ -z "$IMAGE" ]; then
   esac
 fi
 
-ADD_CADDY=false
 if yes_no "Add Caddy route?"; then
   ADD_CADDY=true
 fi
