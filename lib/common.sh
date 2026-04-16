@@ -5,6 +5,7 @@ NETWORK="caddy"
 CADDY_DIR="$BASE_DIR/caddy"
 SITES_DIR="$CADDY_DIR/sites"
 PROTECTED=("caddy")
+DOXO_NONINTERACTIVE="${DOXO_NONINTERACTIVE:-0}"
 
 prompt() {
   local message="$1"
@@ -14,8 +15,15 @@ prompt() {
 }
 
 yes_no() {
-  local message="$1"
-  read -rp "$message (y/n): " yn
+  local prompt="$1"
+  local yn
+
+  if [[ "$DOXO_NONINTERACTIVE" == "1" || ! -t 0 ]]; then
+    info "Non-interactive mode → defaulting YES: $prompt"
+    return 0
+  fi
+
+  read -rp "$prompt (y/n): " yn || return 1
   [[ "$yn" =~ ^[Yy]$ ]]
 }
 

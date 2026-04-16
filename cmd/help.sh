@@ -28,6 +28,10 @@ echo "  expose <app> <domain>       Expose publicly"
 echo "  unexpose <app> --force      Skip confirmation"
 echo "  install --repair            Skip confirmation"
 echo
+echo "Service commands:"
+echo "-----------------"
+echo "  doxo service caddy install"
+echo
 echo "Examples:"
 echo "---------"
 echo "  doxo create myapp"

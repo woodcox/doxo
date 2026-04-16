@@ -43,10 +43,6 @@ exists_dir() {
   [ -d "$1" ]
 }
 
-caddy_compose_running() {
-  docker ps --format '{{.Names}}' | grep -q caddy
-}
-
 # --- parse args ---
 if [[ "${1:-}" == "--repair" ]]; then
   info "Running repair mode..."
@@ -174,93 +170,6 @@ _install_docker_alpine() {
   service docker start
 }
 
-# --- install caddy as a docker container ---
-install_caddy() {
-  info "Setting up Caddy..."
-
-  # warn if system caddy is running
-  if systemctl is-active --quiet caddy 2>/dev/null; then
-    error "A system-installed Caddy is already running — port conflict on 80/443."
-    info "Stop it first: sudo systemctl stop caddy && sudo systemctl disable caddy"
-    return 1
-  fi
-
-  # wait for docker daemon
-  local retries=0
-  until docker info >/dev/null 2>&1; do
-    info "Waiting for Docker daemon..."
-    sleep 2
-    retries=$((retries + 1))
-    [ "$retries" -ge 10 ] && { error "Docker daemon did not start in time"; return 1; }
-  done
-
-  if ! exists_network caddy; then
-    docker network create caddy
-    success "Created docker network: caddy"
-  else
-    info "Docker network 'caddy' already exists"
-  fi
-  
-  # only create sites/ — data/ and config/ are caddy-managed
-  mkdir -p "$HOME/docker/caddy/sites"
-  #mkdir -p "$HOME/docker/caddy/data"
-  #mkdir -p "$HOME/docker/caddy/config"
-
-  success "Created $HOME/docker/caddy/sites"
-
-  if [ ! -f "$HOME/docker/caddy/Caddyfile" ]; then
-    cat <<EOF > "$HOME/docker/caddy/Caddyfile"
-{
-  email you@example.com
-}
-
-import /etc/caddy/sites/*
-EOF
-    success "Caddyfile created"
-    info "⚠️  Edit $HOME/docker/caddy/Caddyfile and set your email address"
-  else
-    info "Caddyfile already exists, skipping"
-  fi
-
-  if [ ! -f "$HOME/docker/caddy/docker-compose.yml" ]; then
-    cat <<EOF > "$HOME/docker/caddy/docker-compose.yml"
-version: "3.8"
-
-services:
-  caddy:
-    image: caddy:alpine
-    container_name: caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - ./sites:/etc/caddy/sites
-      - ./data:/data
-      - ./config:/config
-    networks:
-      - caddy
-
-networks:
-  caddy:
-    external: true
-EOF
-    success "Caddy docker-compose.yml created"
-  else
-    info "Caddy docker-compose.yml already exists, skipping"
-  fi
-
-  cd "$HOME/docker/caddy"
-
-  info "Pulling Caddy image..."
-  docker compose pull
-
-  info "Starting Caddy..."
-  docker compose up -d --remove-orphans
-  success "Caddy is running 🚀"
-}
-
 # --- install doxo ---
 install_doxo() {
   info "Installing doxo..."
@@ -325,34 +234,11 @@ ensure_docker() {
   fi
 }
 
-# --- ensure caddy ---
-ensure_caddy() {
-  if [[ "$REPAIR_MODE" == "1" ]]; then
-    info "Repair mode: rebuilding Caddy..."
-    install_caddy
-    return 0
-  fi
-
-  if caddy_compose_running; then
-    info "Caddy is running"
-    return 0
-  fi
-
-  if yes_no "Caddy is not running. Install Caddy now?"; then
-    #TODO - FIX THIS
-    info "Install Caddy? prompt on a machine that already has something on port 80/443"
-    install_caddy
-  else
-    info "Skipping Caddy setup — see docs/caddy-setup.md"
-  fi
-}
-
 # --- main installer ---
 echo "=== Doxo Installer ==="
 echo
 
 ensure_docker
-ensure_caddy
 install_doxo
 ensure_path
 
@@ -364,15 +250,6 @@ echo "======================================="
 echo
 info "Run: doxo help"
 echo
-
-# --- create test app ---
-#echo
-#if yes_no "Do you want to create a test app (hello-world.local)?"; then
-#  info "Creating test app via doxo..."
-#
-#  doxo create hello-world --local
-#
-#  success "Test app created!"
-#  
-#  info "Then visit: http://hello-world.local"
-#fi
+info "Then run: doxo service install caddy, as you must create a caddy container"
+info "Please make sure nothing is running on port 80 an 443"
+echo

@@ -13,14 +13,22 @@ case "$1" in
   --version|-v)
     echo "doxo $(cat "$DOXO_DIR/VERSION")"
     ;;
+
+  service)
+    shift
+    "$CMD_DIR/service/service.sh" "$@"
+    ;;
+
   create|delete|list|restart|expose|unexpose|open|help|doctor|install|uninstall)
     COMMAND="$1"
     shift
     "$CMD_DIR/$COMMAND.sh" "$@"
     ;;
+
   ""|--help|-h)
     "$CMD_DIR/help.sh"
     ;;
+
   *)
     echo "❌ Unknown command: $1"
     echo
