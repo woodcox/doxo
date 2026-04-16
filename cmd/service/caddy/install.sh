@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-source "$(dirname "$0")/../lib/common.sh"
+source "$(dirname "$0")/../../../lib/common.sh"
 
 # --- helpers ---
 info() { echo "[INFO] $1"; }
@@ -92,8 +92,6 @@ EOF
 
   if [ ! -f "$HOME/docker/caddy/docker-compose.yml" ]; then
     cat <<EOF > "$HOME/docker/caddy/docker-compose.yml"
-version: "3.8"
-
 services:
   caddy:
     image: caddy:alpine
