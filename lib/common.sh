@@ -99,7 +99,7 @@ add_to_hosts() {
 remove_from_hosts() {
   local domain="$1"
   if grep -qE "[[:space:]]$domain$" /etc/hosts; then
-    echo "Removing $domain from /etc/hosts..."
+    echo "Remove $domain from /etc/hosts... (sudo required)"
     sudo sed -i "/[[:space:]]$domain$/d" /etc/hosts \
       || { echo "❌ Failed to update /etc/hosts — try running with sudo"; return 1; }
     echo "✅ Hosts entry removed"
