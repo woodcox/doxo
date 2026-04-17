@@ -62,6 +62,7 @@ status_color() {
   fi
 
 # --- header ---
+echo
 printf "%-${APP_W}s %-${STATUS_W}s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
   "APP" "STATUS" "PORT" "IMAGE" "UPTIME" "MODE" "DOMAIN"
 
@@ -81,8 +82,8 @@ for dir in "$BASE_DIR"/*/; do
 
   STATUS="${STATUS_MAP[$APP_NAME]:-none}"
   UPTIME="${UPTIME_MAP[$APP_NAME]:--}"
-  ICON=$(status_icon "$STATUS")
-  STATUS_DISPLAY="$ICON $STATUS"
+  COLOR=$(status_color "$STATUS")
+  STATUS_DISPLAY="$COLOR $STATUS"
 
 
   # --- determine mode ---
