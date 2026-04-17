@@ -7,6 +7,18 @@ SITES_DIR="$CADDY_DIR/sites"
 PROTECTED=("caddy")
 DOXO_NONINTERACTIVE="${DOXO_NONINTERACTIVE:-0}"
 
+exists_cmd() {
+  command -v "$1" >/dev/null 2>&1
+}
+
+exists_network() {
+  docker network inspect "$1" >/dev/null 2>&1
+}
+
+exists_service() {
+  systemctl list-units --full -all 2>/dev/null | grep -q "$1.service"
+}
+
 prompt() {
   local message="$1"
   local default="$2"

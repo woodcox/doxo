@@ -34,6 +34,7 @@ echo
 echo "Service commands:"
 echo "-----------------"
 echo "  doxo service caddy install"
+echo "  doxo service tailscale install"
 echo
 echo "Examples:"
 echo "---------"

@@ -7,13 +7,6 @@ info() { echo "[INFO] $1"; }
 success() { echo "[OK] $1"; }
 error() { echo "[ERROR] $1" >&2; }
 
-exists_cmd() {
-  command -v "$1" >/dev/null 2>&1
-}
-
-exists_network() {
-  docker network inspect "$1" >/dev/null 2>&1
-}
 
 echo "Caddy service installer"
 echo "======================="
