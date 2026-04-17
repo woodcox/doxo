@@ -41,7 +41,7 @@ is_protected() {
 load_meta() {
   local app_dir="$1"
   IMAGE="-"
-  INTERNAL_PORT="-"
+  CONTAINER_PORT="-"
   PORT="-"
   DOMAIN="-"
   CREATED_AT="-"

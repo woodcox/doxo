@@ -178,7 +178,7 @@ Each app stores metadata in `~/docker/<app>/.meta`:
 
 ~~~bash
 IMAGE=caddy:alpine
-INTERNAL_PORT=80
+CONTAINER_PORT=80
 PORT=8080
 DOMAIN=app1.local
 CREATED_AT=2024-01-01T00:00:00Z

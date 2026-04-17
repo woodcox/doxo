@@ -1,14 +1,16 @@
 #!/usr/bin/env bash
 
+# Usage: doxo create [APP_NAME] [--port PORT] [--image IMAGE] [--no-caddy]
+
 source "$(dirname "$0")/../lib/common.sh"
 
 ERRORS=()
 
 # --- input ---
 APP_NAME="${1:-}"
-PORT="${2:-}"
-IMAGE="${3:-}"
-INTERNAL_PORT=""
+PORT=""
+CONTAINER_PORT=""
+IMAGE=""
 ADD_CADDY=true
 
 # --- parse args ---
@@ -51,8 +53,16 @@ if is_protected "$APP_NAME"; then
   exit 1
 fi
 
-if [ -z "$PORT" ]; then
-  PORT=$(prompt "External port" "8080")
+# --- only prompt for PORT if skipping Caddy ---
+if ! $ADD_CADDY; then
+  if [ -z "$PORT" ]; then
+    PORT=$(prompt "External port" "8080")
+  fi
+fi
+
+# --- warn if --port passed with Caddy enabled ---
+if $ADD_CADDY && [ -n "$PORT" ]; then
+  echo "⚠️  --port is ignored when Caddy is enabled"
 fi
 
 # --- image selection ---
@@ -67,24 +77,37 @@ if [ -z "$IMAGE" ]; then
   case "$choice" in
     1)
       IMAGE="caddy:alpine"
-      INTERNAL_PORT=80
+      CONTAINER_PORT=80
       ;;
     2)
       IMAGE="denoland/deno:latest"
-      INTERNAL_PORT=8000
+      CONTAINER_PORT=8000
       ;;
     3)
       read -rp "Enter image: " IMAGE
-      INTERNAL_PORT=$(prompt "Internal container port" "80")
+      CONTAINER_PORT=$(prompt "Container port" "80")
       ;;
     *)
       IMAGE="caddy:alpine"
-      INTERNAL_PORT=80
+      CONTAINER_PORT=80
+      ;;
+  esac
+else
+  # --- infer CONTAINER_PORT from image flag ---
+  case "$IMAGE" in
+    caddy:alpine)
+      CONTAINER_PORT=80
+      ;;
+    denoland/deno*)
+      CONTAINER_PORT=8000
+      ;;
+    *)
+      CONTAINER_PORT=$(prompt "Container port" "80")
       ;;
   esac
 fi
 
-# --- caddy prompt only if not already decided ---
+# --- caddy info ---
 if $ADD_CADDY; then
   echo "ℹ️  Caddy route will be created for $APP_NAME.local"
   echo "   Use --no-caddy to skip"
@@ -108,7 +131,7 @@ fi
 # --- write metadata ---
 cat <<EOF > "$APP_DIR/.meta"
 IMAGE=$IMAGE
-INTERNAL_PORT=$INTERNAL_PORT
+CONTAINER_PORT=$CONTAINER_PORT
 PORT=$PORT
 DOMAIN=$DOMAIN
 CREATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
@@ -127,6 +150,14 @@ if [ ! -f "$APP_DIR/docker-compose.yml" ]; then
     VOLUMES="- ./data:/data"
   fi
 
+  # --- only expose port mapping if not using Caddy ---
+  if $ADD_CADDY; then
+    PORTS_BLOCK=""
+  else
+    PORTS_BLOCK="    ports:
+      - \"$PORT:$CONTAINER_PORT\""
+  fi
+
   cat <<EOF > "$APP_DIR/docker-compose.yml"
 
 services:
@@ -135,8 +166,7 @@ services:
     container_name: $APP_NAME
     restart: unless-stopped
 $(if [[ "$IMAGE" == denoland/deno* ]]; then echo "    command: [\"run\", \"--allow-net\", \"--allow-read\", \"--allow-env\", \"/app/main.ts\"]"; fi)
-    ports:
-      - "$PORT:$INTERNAL_PORT"
+$PORTS_BLOCK
     volumes:
       $VOLUMES
     networks:
@@ -156,7 +186,7 @@ fi
 if [[ "$IMAGE" == denoland/deno* ]]; then
   if [ ! -f "$APP_DIR/main.ts" ]; then
     cat <<EOF > "$APP_DIR/main.ts"
-Deno.serve({ port: $INTERNAL_PORT }, (req: Request) => {
+Deno.serve({ port: $CONTAINER_PORT }, (req: Request) => {
   const url = new URL(req.url);
 
   if (url.pathname === "/health") {
@@ -205,7 +235,7 @@ EOF
     else
       cat <<EOF > "$SITE_FILE"
 $DOMAIN {
-  reverse_proxy $APP_NAME:$INTERNAL_PORT
+  reverse_proxy $APP_NAME:$CONTAINER_PORT
 }
 EOF
     fi
@@ -214,7 +244,6 @@ EOF
 
     # add to /etc/hosts
     add_to_hosts "$DOMAIN" || ERRORS+=("Failed to update /etc/hosts")
-
     reload_caddy || ERRORS+=("Caddy reload failed")
   else
     echo "Caddy site already exists, skipping"
@@ -231,8 +260,10 @@ IP=$(hostname -I | awk '{print $1}')
 report_errors "$APP_NAME" "created"
 
 echo "Access:"
-echo "  http://$IP:$PORT"
+echo "Access:"
 if $ADD_CADDY; then
-  echo "  http://$DOMAIN (if hosts file configured)"
+  echo "  http://$DOMAIN (your server only)"
+  echo "  You may which to expose the app using doxo expose"
+else
+  echo "  http://$IP:$PORT"
 fi
-echo

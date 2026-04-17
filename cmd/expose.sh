@@ -89,7 +89,7 @@ EOF
 else
   cat <<EOF > "$SITE_FILE"
 $DOMAIN {
-  reverse_proxy $APP_NAME:$INTERNAL_PORT
+  reverse_proxy $APP_NAME:$CONTAINER_PORT
 }
 EOF
 fi
