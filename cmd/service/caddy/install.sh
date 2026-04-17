@@ -11,7 +11,6 @@ error() { echo "[ERROR] $1" >&2; }
 echo "Caddy service installer"
 echo "======================="
 
-ERRORS=()
 FORCE=0
 if [[ "${1:-}" == "--force" ]]; then
   FORCE=1
@@ -132,7 +131,7 @@ echo
 if yes_no "Do you want to create a test app (hello-world.local)?"; then
   info "Creating test app via doxo..."
 
-  doxo create hello-world --local
+  doxo create hello-world
 
   success "Test app created!"
   

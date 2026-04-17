@@ -37,6 +37,34 @@ else
   }
 fi
 
+# --- configure caddy access to tailscale socket ---
+
+# note: only required if caddy runs as non-root
+# docker caddy container runs as root by default so this may be a no-op
+# included for completeness if caddy user is changed later
+TAILSCALED_DEFAULT="/etc/default/tailscaled"
+
+if [ -f "$TAILSCALED_DEFAULT" ]; then
+  if grep -q "TS_PERMIT_CERT_UID" "$TAILSCALED_DEFAULT"; then
+    info "TS_PERMIT_CERT_UID already set"
+  else
+    info "Granting Caddy access to Tailscale certificates..."
+    echo "TS_PERMIT_CERT_UID=caddy" | sudo tee -a "$TAILSCALED_DEFAULT" >/dev/null || {
+      error "Failed to update $TAILSCALED_DEFAULT"
+      exit 1
+    }
+    info "Restarting tailscaled..."
+    sudo systemctl restart tailscaled || {
+      error "Failed to restart tailscaled"
+      exit 1
+    }
+    success "Caddy granted certificate access"
+  fi
+else
+  error "$TAILSCALED_DEFAULT not found — is tailscaled installed?"
+  exit 1
+fi
+
 if tailscale status &>/dev/null; then
   info "Tailscale already authenticated"
 else

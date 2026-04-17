@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# check with ls -l cmd/*.sh
+
 echo "🔧 Fixing script permissions..."
 
 # Ensure scripts are executable
