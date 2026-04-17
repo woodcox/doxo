@@ -2,6 +2,12 @@
 
 source "$(dirname "$0")/../lib/common.sh"
 
+# --- color definitions ---
+GREEN='\033[0;32m'
+RED='\033[0;31m'
+GREY='\033[0;37m'
+RESET='\033[0m'
+
 # --- preload docker data ---
 DOCKER_PS=$(docker ps --format '{{.Names}}|{{.Status}}')
 DOCKER_PS_ALL=$(docker ps -a --format '{{.Names}}|{{.Status}}')
@@ -29,11 +35,11 @@ while IFS='|' read -r NAME STATUS; do
   fi
 done <<< "$DOCKER_PS_ALL"
 
-status_icon() {
+status_color() {
   case "$1" in
-    running) echo "🟢" ;;
-    stopped) echo "🔴" ;;
-    *)       echo "⚪" ;;
+    running) echo "$GREEN" ;;
+    stopped) echo "$RED" ;;
+    *)       echo "$GREY" ;;
   esac
 }
 
@@ -56,7 +62,7 @@ status_icon() {
   fi
 
 # --- header ---
-printf "\n%-${APP_W}s %-10s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
+printf "%-${APP_W}s %-${STATUS_W}s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
   "APP" "STATUS" "PORT" "IMAGE" "UPTIME" "MODE" "DOMAIN"
 
 # --- seperator ---
@@ -102,9 +108,11 @@ for dir in "$BASE_DIR"/*/; do
   fi
 
   # --- row ---
-  printf "%-${APP_W}s %-10s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
-  "$APP_NAME" "$STATUS_DISPLAY" "$PORT" "$IMAGE" "$UPTIME" "$MODE" "$DOMAIN_DISPLAY"
-  
+  COLOR=$(status_color "$STATUS")
+  printf "%-${APP_W}s " "$APP_NAME"
+  printf "${COLOR}%-${STATUS_W}s${RESET} " "$STATUS"
+  printf "%-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
+  "$PORT" "$IMAGE" "$UPTIME" "$MODE" "$DOMAIN_DISPLAY"
 done
 
 echo
