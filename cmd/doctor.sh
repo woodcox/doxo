@@ -120,7 +120,7 @@ echo "  ✔ $APP_COUNT app(s) found in $BASE_DIR"
 
 # --- Summary ---
 echo
-echo "==================="
+echo "======================="
 
 if [ ${#WARNINGS[@]} -gt 0 ]; then
   echo "⚠️  Warnings:"
@@ -132,13 +132,13 @@ fi
 
 if [ ${#ERRORS[@]} -eq 0 ]; then
   echo "✅ All systems healthy"
+  echo "======================="
   exit 0
 else
   echo "❌ Issues detected:"
+  echo "======================="
   for e in "${ERRORS[@]}"; do
     echo "   • $e"
   done
   exit 1
 fi
-echo "==================="
-echo
