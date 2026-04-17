@@ -60,4 +60,4 @@ update_meta "DOMAIN" "-" || ERRORS+=("Failed to update .meta")
 # --- reload caddy ---
 reload_caddy || ERRORS+=("Caddy reload failed")
 
-report_errors "$APP_NAME ($DOMAIN)" "unexposed"
+report_errors "$APP_NAME ($DOMAIN)" "unexposed" "${ERRORS[@]}"

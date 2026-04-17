@@ -8,6 +8,7 @@ A simple CLI that combines Docker and Caddy to create and manage consistent dock
  - Server: Any modern Linux server 
  - Domain: A domain or subdomain pointing to your server for secure API access
  - Tailscale (optional) for secure networking
+ - Consider installing `jq`this is used to detect the tailnet MagicDNSSuffix more reliably (see cmd/expose.sh)
 
 
 ## Install

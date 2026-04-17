@@ -5,7 +5,7 @@ source "$(dirname "$0")/../lib/common.sh"
 ERRORS=()
 
 APP_NAME="${1:-}"
-ARG2="${2:-}"
+EXPOSE_TARGET="${2:-}"
 
 # --- input ---
 if [ -z "$APP_NAME" ]; then
@@ -31,10 +31,16 @@ fi
 # --- load metadata ---
 load_meta "$APP_DIR"
 
+
+# --- guard container port ---
+if [ -z "$CONTAINER_PORT" ]; then
+  CONTAINER_PORT=$(prompt "Container port" "80")
+fi
+
 # --- determine local/tailnet/domain mode ---
 MODE="public"
 
-case "$ARG2" in
+case "$EXPOSE_TARGET" in
   --local)
     MODE="local"
     DOMAIN="$APP_NAME.local"
@@ -43,7 +49,11 @@ case "$ARG2" in
     MODE="tailnet"
 
     # detect tailnet domain
-    TAILNET_DOMAIN=$(tailscale status --json 2>/dev/null | grep -o '"MagicDNSSuffix":[^,]*' | cut -d'"' -f4)
+    if command -v jq &>/dev/null; then
+      TAILNET_DOMAIN=$(tailscale status --json 2>/dev/null | jq -r '.MagicDNSSuffix')
+    else
+      TAILNET_DOMAIN=$(tailscale status --json 2>/dev/null | grep -o '"MagicDNSSuffix":[^,]*' | cut -d'"' -f4)
+    fi
 
     if [ -z "$TAILNET_DOMAIN" ]; then
       echo "❌ Could not detect Tailscale domain (is tailscale running?)"
@@ -56,12 +66,13 @@ case "$ARG2" in
     DOMAIN=$(prompt "Domain" "$DOMAIN")
     ;;
   *)
-    DOMAIN="$ARG2"
+    DOMAIN="$EXPOSE_TARGET"
     ;;
 esac
 
 echo "=== Expose App ==="
 echo "App:    $APP_NAME"
+echo "Mode:   $MODE"
 echo "Image:  $IMAGE"
 echo "Domain: $DOMAIN"
 echo
@@ -75,6 +86,7 @@ if [ -f "$SITE_FILE" ]; then
     echo "Cancelled"
     exit 0
   fi
+  remove_from_hosts "$APP_NAME.local" || ERRORS+=("Failed to update /etc/hosts")
 fi
 
 echo "Creating Caddy site: $SITE_FILE"
@@ -87,14 +99,12 @@ $DOMAIN {
 }
 EOF
 else
-  cat <<EOF > "$SITE_FILE"
+  cat <<EOF > "$SITE_FILE" || ERRORS+=("Failed to write $SITE_FILE")
 $DOMAIN {
   reverse_proxy $APP_NAME:$CONTAINER_PORT
 }
 EOF
 fi
-
-[ $? -ne 0 ] && ERRORS+=("Failed to write $SITE_FILE")
 
 # --- local mode: update hosts ---
 if [ "$MODE" == "local" ]; then
@@ -108,7 +118,7 @@ update_meta "DOMAIN" "$DOMAIN" || ERRORS+=("Failed to update .meta")
 reload_caddy || ERRORS+=("Caddy reload failed")
 
 # --- result ---
-report_errors "$APP_NAME" "exposed"
+report_errors "$APP_NAME" "exposed" "${ERRORS[@]}"
 
 echo "URL:"
 echo "  http://$DOMAIN"

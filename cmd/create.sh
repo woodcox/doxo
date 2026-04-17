@@ -257,7 +257,7 @@ docker compose up -d || ERRORS+=("docker compose up failed for $APP_NAME")
 # --- report ---
 IP=$(hostname -I | awk '{print $1}')
 
-report_errors "$APP_NAME" "created"
+report_errors "$APP_NAME" "created" "${ERRORS[@]}"
 
 echo "Access:"
 echo "Access:"

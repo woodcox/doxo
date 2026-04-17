@@ -40,11 +40,11 @@ is_protected() {
 
 load_meta() {
   local app_dir="$1"
-  IMAGE="-"
-  CONTAINER_PORT="-"
-  PORT="-"
-  DOMAIN="-"
-  CREATED_AT="-"
+  IMAGE=""
+  CONTAINER_PORT=""
+  PORT=""
+  DOMAIN=""
+  CREATED_AT=""
   if [ -f "$app_dir/.meta" ]; then
     source "$app_dir/.meta"
   fi

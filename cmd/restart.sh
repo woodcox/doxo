@@ -45,4 +45,4 @@ else
   docker compose restart || ERRORS+=("docker compose restart failed")
 fi
 
-report_errors "$APP_NAME" "restarted"
+report_errors "$APP_NAME" "restarted" "${ERRORS[@]}"

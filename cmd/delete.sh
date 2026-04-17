@@ -75,4 +75,12 @@ else
   echo "No Caddy site found, skipping"
 fi
 
-report_errors "$APP_NAME" "deleted"
+# --- remove from /etc/hosts if local domain ---
+if [[ "$DOMAIN" == *.local ]]; then
+  echo "🧹 Removing $DOMAIN from /etc/hosts..."
+  remove_from_hosts "$DOMAIN" || ERRORS+=("Failed to update /etc/hosts")
+else
+  echo "No local domain to clean up"
+fi
+
+report_errors "$APP_NAME" "deleted" "${ERRORS[@]}"
