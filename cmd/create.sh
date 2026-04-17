@@ -260,10 +260,12 @@ IP=$(hostname -I | awk '{print $1}')
 report_errors "$APP_NAME" "created" "${ERRORS[@]}"
 
 echo "Access:"
-echo "Access:"
+echo "======="
+echo
 if $ADD_CADDY; then
   echo "  http://$DOMAIN (your server only)"
   echo "  You may which to expose the app using doxo expose"
 else
   echo "  http://$IP:$PORT"
 fi
+echo
