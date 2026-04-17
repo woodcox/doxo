@@ -2,22 +2,28 @@
 
 echo "🔧 Fixing script permissions..."
 
+# Ensure scripts are executable
 for dir in cmd lib bin; do
   [ -d "$dir" ] || continue
 
   while IFS= read -r file; do
-    if [[ ! -x "$file" ]]; then
-      echo "⚠️ Making executable: $file"
-      chmod +x "$file"
-      git add "$file"   # 🔥 THIS is what you're missing
+    perms=$(stat -c "%a" "$file" 2>/dev/null)
+
+    if [ "$perms" != "755" ]; then
+      echo "⚠️ Fixing permissions: $file ($perms → 755)"
+      chmod 755 "$file"
     fi
-  done < <(find "$dir" -type f -name "*.sh")
+
+  done < <(find "$dir" -type f -name "*.sh" 2>/dev/null)
 
 done
 
-# main entrypoints
-[ -f "bin/doxo" ] && chmod +x bin/doxo && git add bin/doxo
-[ -f "install.sh" ] && chmod +x install.sh && git add install.sh
+# Main CLI entrypoints
+[ -f "bin/doxo" ] && chmod 755 bin/doxo
+[ -f "cmd/service" ] && chmod 755 cmd/service
+[ -f "cmd/service/caddy" ] && chmod 755 cmd/service/caddy
+[ -f "cmd/service/tailscale" ] && chmod 755 cmd/service/tailscale
+[ -f "install.sh" ] && chmod 755 install.sh
 
 echo "✅ Permissions fixed"
 exit 0
