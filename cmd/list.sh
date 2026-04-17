@@ -37,14 +37,6 @@ status_icon() {
   esac
 }
 
-# --- header ---
-printf "\n%-${APP_W}s %-10s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
-  "APP" "STATUS" "PORT" "IMAGE" "UPTIME" "MODE" "DOMAIN"
-
-# --- seperator ---
-printf "%-${APP_W}s %-10s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
-  "--------------------" "----------" "----------" "----------------------" "----------" "----------" "------------------------------"
-
 # --- dynamic terminal width ---
   TERM_WIDTH=$(tput cols 2>/dev/null || echo 120)
 
@@ -62,6 +54,14 @@ printf "%-${APP_W}s %-10s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s
   if [ "$DOMAIN_W" -lt 15 ]; then
     DOMAIN_W=15
   fi
+
+# --- header ---
+printf "\n%-${APP_W}s %-10s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
+  "APP" "STATUS" "PORT" "IMAGE" "UPTIME" "MODE" "DOMAIN"
+
+# --- seperator ---
+printf "%-${APP_W}s %-10s %-${PORT_W}s %-${IMAGE_W}s %-${UPTIME_W}s %-${MODE_W}s %-${DOMAIN_W}s\n" \
+  "--------------------" "----------" "----------" "----------------------" "----------" "----------" "------------------------------"
 
 # --- loop apps ---
 for dir in "$BASE_DIR"/*/; do

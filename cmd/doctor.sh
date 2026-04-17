@@ -3,7 +3,7 @@
 source "$(dirname "$0")/../lib/common.sh"
 
 echo "🩺 Doxo Doctor"
-echo "=============="
+echo "==================="
 
 ERRORS=()
 WARNINGS=()
@@ -83,7 +83,7 @@ fi
 
 # --- Doxo CLI ---
 echo
-echo "⚙️  Doxo CLI"
+echo "⚙️ Doxo CLI"
 
 if command -v doxo >/dev/null 2>&1; then
   DOXO_PATH=$(command -v doxo)
@@ -120,7 +120,7 @@ echo "  ✔ $APP_COUNT app(s) found in $BASE_DIR"
 
 # --- Summary ---
 echo
-echo "=============="
+echo "==================="
 
 if [ ${#WARNINGS[@]} -gt 0 ]; then
   echo "⚠️  Warnings:"
@@ -140,3 +140,5 @@ else
   done
   exit 1
 fi
+echo "==================="
+echo
