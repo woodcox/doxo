@@ -3,7 +3,8 @@
 BASE_DIR="$HOME/docker"
 NETWORK="caddy"
 CADDY_DIR="$BASE_DIR/caddy"
-SITES_DIR="$CADDY_DIR/sites"
+SITES_DIR="$CADDY_DIR/sites" # host path — used by scripts         
+CADDY_SITES_DIR="/etc/caddy/sites" # container path — used in Caddyfile imports
 PROTECTED=("caddy")
 DOXO_NONINTERACTIVE="${DOXO_NONINTERACTIVE:-0}"
 
@@ -56,6 +57,7 @@ load_meta() {
   CONTAINER_PORT=""
   PORT=""
   DOMAIN=""
+  PATH=""
   CREATED_AT=""
   if [ -f "$app_dir/.meta" ]; then
     source "$app_dir/.meta"

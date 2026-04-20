@@ -264,7 +264,7 @@ echo "======="
 echo
 if $ADD_CADDY; then
   echo "  http://$DOMAIN (your server only)"
-  echo "  You may which to expose the app using doxo expose"
+  echo "  You may which to expose the app using doxo expose [app-name]"
 else
   echo "  http://$IP:$PORT"
 fi
