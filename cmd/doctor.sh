@@ -2,111 +2,149 @@
 
 source "$(dirname "$0")/../lib/common.sh"
 
-echo "🩺 Doxo Doctor"
-echo "==================="
-
 ERRORS=()
 WARNINGS=()
 
-# --- Docker ---
-echo
-echo "🐳 Docker"
+check_ok()   { gum style --foreground 212 "  ✔ $1"; }
+check_err()  { gum style --foreground 196 "  ✖ $1"; ERRORS+=("$1"); }
+check_warn() { gum style --foreground 214 "  ⚠ $1"; WARNINGS+=("$1"); }
 
-if command -v docker >/dev/null 2>&1; then
-  echo "  ✔ Docker installed: $(docker --version)"
+# --- header ---
+gum style \
+  --foreground 212 --border-foreground 212 --border rounded \
+  --padding "0 1" "  doxo doctor"
+echo
+
+# --- Docker ---
+gum style --foreground 212 --bold "Docker"
+
+if exists_cmd docker; then
+  check_ok "Docker installed: $(docker --version)"
 else
-  echo "  ❌ Docker not installed"
-  ERRORS+=("Docker not installed — run install.sh")
+  check_err "Docker not installed — run install.sh"
 fi
 
 if docker info >/dev/null 2>&1; then
-  echo "  ✔ Docker daemon running"
+  check_ok "Docker daemon running"
 else
-  echo "  ❌ Docker daemon not running"
-  ERRORS+=("Docker daemon not running — try: sudo systemctl start docker")
+  check_err "Docker daemon not running — try: sudo systemctl start docker"
 fi
 
 if docker compose version >/dev/null 2>&1; then
-  echo "  ✔ Docker Compose available: $(docker compose version)"
+  check_ok "Docker Compose available: $(docker compose version)"
 else
-  echo "  ❌ Docker Compose plugin not found"
-  ERRORS+=("Docker Compose missing — install docker-compose-plugin")
+  check_err "Docker Compose plugin not found — install docker-compose-plugin"
 fi
 
 # --- Docker network ---
 echo
-echo "🔗 Network"
+gum style --foreground 212 --bold "Network"
 
-if docker network inspect "$NETWORK" >/dev/null 2>&1; then
-  echo "  ✔ Docker network '$NETWORK' exists"
+if docker network inspect haloy >/dev/null 2>&1; then
+  check_ok "Docker network 'haloy' exists"
 else
-  echo "  ❌ Docker network '$NETWORK' missing"
-  ERRORS+=("Docker network '$NETWORK' missing — run: docker network create $NETWORK")
+  check_warn "Docker network 'haloy' missing — will be created on first doxo create"
 fi
 
-# --- Caddy ---
+# --- haloyd ---
 echo
-echo "🌐 Caddy"
+gum style --foreground 212 --bold "haloyd"
 
-# check for system caddy conflict
-if systemctl is-active --quiet caddy 2>/dev/null; then
-  echo "  ⚠️  System Caddy service is running (port conflict risk)"
-  WARNINGS+=("System caddy service running — may conflict on ports 80/443. Disable with: sudo systemctl stop caddy && sudo systemctl disable caddy")
+if exists_service haloyd; then
+  if systemctl is-active --quiet haloyd 2>/dev/null; then
+    check_ok "haloyd service running"
+  else
+    check_err "haloyd service installed but not running — try: sudo systemctl start haloyd"
+  fi
+else
+  check_err "haloyd not installed — see https://haloy.dev/docs/server-installation"
 fi
 
-if docker ps --format '{{.Names}}' | grep -q '^caddy$'; then
-  echo "  ✔ Caddy container running"
-
-  # validate caddy config
-  if docker exec caddy caddy validate --config /etc/caddy/Caddyfile >/dev/null 2>&1; then
-    echo "  ✔ Caddyfile valid"
+# check ports 80/443 are accessible (haloyd proxy)
+for port in 80 443; do
+  if ss -tlnp 2>/dev/null | grep -q ":$port "; then
+    check_ok "Port $port is bound"
   else
-    echo "  ❌ Caddyfile has errors"
-    ERRORS+=("Caddyfile invalid — run: docker exec caddy caddy validate --config /etc/caddy/Caddyfile")
+    check_warn "Port $port not bound — haloyd proxy may not be running"
   fi
+done
 
-  # check sites dir is mounted and readable
-  if docker exec caddy test -d /etc/caddy/sites >/dev/null 2>&1; then
-    SITE_COUNT=$(docker exec caddy sh -c 'ls /etc/caddy/sites/ 2>/dev/null | wc -l')
-    echo "  ✔ Sites directory mounted ($SITE_COUNT site(s) loaded)"
+# warn if system caddy is running and competing on 80/443
+if systemctl is-active --quiet caddy 2>/dev/null; then
+  check_warn "System Caddy service is running — may conflict with haloyd on ports 80/443. Disable with: sudo systemctl disable --now caddy"
+fi
+
+# --- Tailscale ---
+echo
+gum style --foreground 212 --bold "Tailscale"
+
+if exists_cmd tailscale; then
+  check_ok "Tailscale installed: $(tailscale version | head -1)"
+
+  if tailscale status >/dev/null 2>&1; then
+    check_ok "Tailscale connected"
+
+    # check MagicDNS hostname is resolvable
+    if command -v jq &>/dev/null; then
+      TS_MACHINE=$(tailscale status --json 2>/dev/null \
+        | jq -r '.Self.DNSName | rtrimstr(".")')
+    else
+      TS_MACHINE=$(tailscale status --json 2>/dev/null \
+        | grep -o '"DNSName":[^,]*' | head -1 | cut -d'"' -f4 | sed 's/\.$//')
+    fi
+
+    if [ -n "$TS_MACHINE" ]; then
+      check_ok "MagicDNS hostname: $TS_MACHINE"
+    else
+      check_warn "Could not detect Tailscale MagicDNS hostname — is MagicDNS enabled?"
+    fi
+
+    # check funnel is available
+    if tailscale funnel status >/dev/null 2>&1; then
+      check_ok "Tailscale Funnel available"
+    else
+      check_warn "Tailscale Funnel unavailable — enable it in the Tailscale admin console"
+    fi
   else
-    echo "  ❌ Sites directory not found inside Caddy container"
-    ERRORS+=("Caddy sites directory not mounted — check docker-compose.yml volumes")
+    check_err "Tailscale not connected — run: tailscale up"
   fi
-elif docker ps -a --format '{{.Names}}' | grep -q '^caddy$'; then
-  echo "  ❌ Caddy container exists but is stopped"
-  ERRORS+=("Caddy stopped — run: cd ~/docker/caddy && docker compose up -d")
 else
-  echo "  ❌ Caddy container not found"
-  ERRORS+=("Caddy not installed — run install.sh")
+  check_warn "Tailscale not installed — needed for expose --public / --private"
+fi
+
+# --- jq ---
+echo
+gum style --foreground 212 --bold "Optional tools"
+
+if exists_cmd jq; then
+  check_ok "jq installed — Tailscale hostname detection will be reliable"
+else
+  check_warn "jq not installed — Tailscale hostname detection uses fallback grep (less reliable). Install with: sudo apt install jq"
 fi
 
 # --- Doxo CLI ---
 echo
-echo "⚙️ Doxo CLI"
+gum style --foreground 212 --bold "Doxo CLI"
 
-if command -v doxo >/dev/null 2>&1; then
+if exists_cmd doxo; then
   DOXO_PATH=$(command -v doxo)
-  echo "  ✔ doxo in PATH: $DOXO_PATH"
+  check_ok "doxo in PATH: $DOXO_PATH"
 
-  # check symlink target still exists
   if [ -L "$DOXO_PATH" ]; then
     TARGET=$(readlink -f "$DOXO_PATH")
     if [ -f "$TARGET" ]; then
-      echo "  ✔ Symlink target exists: $TARGET"
+      check_ok "Symlink target exists: $TARGET"
     else
-      echo "  ❌ Symlink target missing: $TARGET"
-      ERRORS+=("doxo symlink broken — run install.sh to reinstall")
+      check_err "Symlink target missing: $TARGET — run install.sh to reinstall"
     fi
   fi
 else
-  echo "  ❌ doxo not in PATH"
-  ERRORS+=("doxo not in PATH — add $HOME/.local/bin to PATH or run install.sh")
+  check_err "doxo not in PATH — add $HOME/.local/bin to PATH or run install.sh"
 fi
 
 # --- Apps ---
 echo
-echo "📦 Apps"
+gum style --foreground 212 --bold "Apps"
 
 APP_COUNT=0
 for dir in "$BASE_DIR"/*/; do
@@ -116,29 +154,29 @@ for dir in "$BASE_DIR"/*/; do
   APP_COUNT=$((APP_COUNT + 1))
 done
 
-echo "  ✔ $APP_COUNT app(s) found in $BASE_DIR"
+check_ok "$APP_COUNT app(s) found in $BASE_DIR"
 
-# --- Summary ---
+# --- summary ---
 echo
-echo "======================="
-
-if [ ${#WARNINGS[@]} -gt 0 ]; then
-  echo "⚠️  Warnings:"
+if [ ${#ERRORS[@]} -eq 0 ] && [ ${#WARNINGS[@]} -eq 0 ]; then
+  gum style \
+    --foreground 212 --border-foreground 212 --border rounded \
+    --padding "0 1" "  ✔ All systems healthy"
+elif [ ${#ERRORS[@]} -eq 0 ]; then
+  gum style \
+    --foreground 214 --border-foreground 214 --border rounded \
+    --padding "0 1" "  ⚠ Healthy with warnings"
   for w in "${WARNINGS[@]}"; do
-    echo "   • $w"
+    gum style --foreground 214 "  • $w"
+  done
+else
+  gum style \
+    --foreground 196 --border-foreground 196 --border rounded \
+    --padding "0 1" "  ✖ Issues detected"
+  for e in "${ERRORS[@]}"; do
+    gum style --foreground 196 "  • $e"
   done
   echo
-fi
-
-if [ ${#ERRORS[@]} -eq 0 ]; then
-  echo "✅ All systems healthy"
-  echo "======================="
-  exit 0
-else
-  echo "❌ Issues detected:"
-  echo "======================="
-  for e in "${ERRORS[@]}"; do
-    echo "   • $e"
-  done
   exit 1
 fi
+echo

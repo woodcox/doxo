@@ -4,21 +4,21 @@ source "$(dirname "$0")/../lib/common.sh"
 
 APP_NAME="$1"
 
-# --- input ---
+# --- validate ---
 if [ -z "$APP_NAME" ]; then
-  echo "Usage: doxo open <app-name>"
+  gum log --level error "Usage: doxo open <app-name>"
   exit 1
 fi
 
 if ! validate_name "$APP_NAME"; then
-  echo "❌ Invalid app name"
+  gum log --level error "Invalid app name"
   exit 1
 fi
 
 APP_DIR="$BASE_DIR/$APP_NAME"
 
 if [ ! -d "$APP_DIR" ]; then
-  echo "❌ App '$APP_NAME' does not exist"
+  gum log --level error "App '$APP_NAME' does not exist"
   exit 1
 fi
 
@@ -26,28 +26,28 @@ fi
 load_meta "$APP_DIR"
 
 # --- determine URL ---
-if [ -n "$DOMAIN" ] && [ "$DOMAIN" != "-" ]; then
-  # use http for .local domains, https for real domains
-  if [[ "$DOMAIN" == *.local ]]; then
-    URL="http://$DOMAIN"
-  else
-    URL="https://$DOMAIN"
-  fi
-elif [ -n "$PORT" ] && [ "$PORT" != "-" ]; then
-  # fall back to port-based URL
-  URL="http://$(get_local_ip):$PORT"
+# public:  custom domain, HTTPS — https://myapp.yourdomain.com
+# private: Tailscale MagicDNS hostname + path — https://device.ts.net/myapp
+# none:    unexposed, fall back to localhost for local testing
+if [ "$MODE" = "public" ] && [ -n "$DOMAIN" ]; then
+  URL="https://$DOMAIN"
+elif [ "$MODE" = "private" ] && [ -n "$DOMAIN" ]; then
+  URL="https://$DOMAIN/$APP_NAME"
+elif [ -n "$PORT" ]; then
+  URL="http://localhost:$PORT"
 else
-  echo "❌ No domain or port found for '$APP_NAME'"
+  gum log --level error "No domain or port found for '$APP_NAME'"
   exit 1
 fi
 
-echo "🌐 Opening $URL..."
+gum style --foreground 212 "Opening $URL"
 
 # --- open browser ---
-if command -v xdg-open >/dev/null 2>&1; then
-  xdg-open "$URL"
-elif command -v open >/dev/null 2>&1; then
+if exists_cmd xdg-open; then
+  xdg-open "$URL" 2>/dev/null &
+elif exists_cmd open; then
   open "$URL"
 else
-  echo "👉 Open manually: $URL"
+  gum log --level warn "No browser opener found — open manually:"
+  gum style --foreground 212 "  $URL"
 fi

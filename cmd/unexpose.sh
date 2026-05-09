@@ -3,120 +3,96 @@
 source "$(dirname "$0")/../lib/common.sh"
 
 ERRORS=()
+APP_NAME=""
+FORCE=false
 
-APP_NAME="${1:-}"
-FORCE="${2:-}"
-
+# --- parse args ---
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --force)
-      FORCE=true
-      shift
-      ;;
+    --force) FORCE=true; shift ;;
     *)
-      if [ -z "$APP_NAME" ]; then
-        APP_NAME="$1"
-      fi
+      if [ -z "$APP_NAME" ]; then APP_NAME="$1"; fi
       shift
       ;;
   esac
 done
 
-# --- input ---
+# --- validate ---
 if [ -z "$APP_NAME" ]; then
-  echo "Usage: doxo unexpose <app-name> [--force]"
+  gum log --level error "Usage: doxo unexpose <app-name> [--force]"
   exit 1
 fi
 
 if ! validate_name "$APP_NAME"; then
-  echo "❌ Invalid app name"
+  gum log --level error "Invalid app name"
   exit 1
 fi
 
 APP_DIR="$BASE_DIR/$APP_NAME"
-SITE_FILE="$SITES_DIR/$APP_NAME.caddy"
-APP_TAILNET_FILE="$SITES_DIR/tailnet/$APP_NAME.caddy"
 
 if [ ! -d "$APP_DIR" ]; then
-  echo "❌ App '$APP_NAME' does not exist"
+  gum log --level error "App '$APP_NAME' does not exist"
+  exit 1
+fi
+
+if [ ! -f "$APP_DIR/.meta" ]; then
+  gum log --level error "No .meta file found — was this app created with doxo create?"
   exit 1
 fi
 
 # --- load metadata ---
 load_meta "$APP_DIR"
 
-# --- detect mode from metadata ---
-if [ -n "$DOMAIN" == *.ts.net* ]]; then
-  MODE="tailnet"
-elif [[ "$DOMAIN" == *.local ]]; then
-  MODE="local"
-elif [ -n "$DOMAIN" ]; then
-  MODE="public"
-else
-  MODE="none"
+# --- check exposure exists ---
+if [ "${MODE:-none}" = "none" ] || [ -z "$DOMAIN" ]; then
+  gum log --level warn "'$APP_NAME' is not currently exposed"
+  exit 0
 fi
 
-echo "=== Unexpose App ==="
-echo "App:    $APP_NAME"
-if [ MODE="tailnet"]; then
-echo "Domain: ${DOMAIN/$APP_NAME:--}"
-else
-  echo "Domain: ${DOMAIN:--}"
-fi
+# --- header ---
+gum style \
+  --foreground 212 --border-foreground 212 --border rounded \
+  --padding "0 1" "  doxo unexpose"
+
+echo
+gum style --foreground 240 "  App     $(gum style --foreground 212 "$APP_NAME")"
+gum style --foreground 240 "  Mode    $(gum style --foreground 212 "$MODE")"
+gum style --foreground 240 "  Domain  $(gum style --foreground 212 "$DOMAIN")"
 echo
 
-# --- check exposure exists ---
-if [ "$MODE" == "none" ]; then
-  echo "ℹ️  No exposure found for '$APP_NAME'"
-  exit 0
-fi
-
-if [ "$MODE" == "tailnet" ] && [ ! -f "$APP_TAILNET_FILE" ]; then
-  echo "ℹ️  No tailnet exposure found for '$APP_NAME'"
-  exit 0
-fi
-
-if [ "$MODE" != "tailnet" ] && [ ! -f "$SITE_FILE" ]; then
-  echo "ℹ️  No exposure found for '$APP_NAME'"
-  exit 0
-fi
-
 # --- confirm ---
-if [ "$FORCE" != "--force" ]; then
-  if ! yes_no "Remove exposure for '$APP_NAME' ($DOMAIN)?"; then
-    echo "Cancelled"
-    exit 0
-  fi
+if [ "$FORCE" != true ]; then
+  gum confirm "Remove exposure for '$APP_NAME'?" || { echo "Cancelled"; exit 0; }
 fi
 
-# --- remove based on mode ---
-if [ "$MODE" == "tailnet" ]; then
-  echo "Removing tailnet handle..."
-  rm "$APP_TAILNET_FILE" || ERRORS+=("Failed to remove $APP_TAILNET_FILE")
-  echo "Tailnet handle removed"
-
-  # --- remove tailnet.caddy if no apps left ---
-  if [ -z "$(ls -A "$SITES_DIR/tailnet/" 2>/dev/null)" ]; then
-    echo "No tailnet apps remaining, removing tailnet.caddy..."
-    rm -f "$SITES_DIR/tailnet.caddy" || ERRORS+=("Failed to remove tailnet.caddy")
-  fi
-
-else
-  echo "Removing Caddy site..."
-  rm "$SITE_FILE" || ERRORS+=("Failed to remove $SITE_FILE")
-  echo "Caddy site removed"
-
-  # --- remove hosts entry for local mode ---
-  if [ "$MODE" == "local" ]; then
-    remove_from_hosts "$DOMAIN" || ERRORS+=("Failed to update /etc/hosts")
-  fi
+# --- remove tailscale funnel or serve ---
+if [ "$MODE" = "public" ]; then
+  gum spin --spinner dot --title "Removing Tailscale Funnel for $APP_NAME..." -- \
+    tailscale funnel --bg --set-path "/$APP_NAME" off \
+    || ERRORS+=("tailscale funnel off failed")
+elif [ "$MODE" = "private" ]; then
+  gum spin --spinner dot --title "Removing Tailscale Serve for $APP_NAME..." -- \
+    tailscale serve --bg --set-path "/$APP_NAME" off \
+    || ERRORS+=("tailscale serve off failed")
 fi
 
-# --- update metadata ---
-update_meta "DOMAIN" "" || ERRORS+=("Failed to update .meta")
-update_meta "PATH" "" || ERRORS+=("Failed to update .meta")
+# --- remove domain label from compose and increment deployment-id ---
+COMPOSE_FILE="$APP_DIR/docker-compose.yml"
+if [ -f "$COMPOSE_FILE" ]; then
+  sed -i '/dev.haloy.domain/d' "$COMPOSE_FILE" \
+    || ERRORS+=("Failed to remove domain label from docker-compose.yml")
+  increment_deployment_id "$COMPOSE_FILE" \
+    || ERRORS+=("Failed to increment deployment-id")
+fi
 
-# --- reload caddy ---
-reload_caddy || ERRORS+=("Caddy reload failed")
+# --- restart container so haloyd stops routing to it ---
+gum spin --spinner dot --title "Restarting $APP_NAME..." -- \
+  bash -c "cd '$APP_DIR' && docker compose up -d --force-recreate" \
+  || ERRORS+=("docker compose up failed")
 
-report_errors "$APP_NAME ($DOMAIN)" "unexposed" "${ERRORS[@]}"
+# --- update .meta ---
+update_meta "DOMAIN" "" || ERRORS+=("Failed to update .meta DOMAIN")
+update_meta "MODE"   "none" || ERRORS+=("Failed to update .meta MODE")
+
+# --- report ---
+report_errors "$APP_NAME" "unexposed" "${ERRORS[@]}"
