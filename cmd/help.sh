@@ -23,6 +23,7 @@ gum style --foreground 240 "  help                Show this help message"
 echo
 
 gum style --foreground 212 --bold "Flags"
+gum style --foreground 240 "  doxo --version, -v             Show the doxo version number"
 gum style --foreground 240 "  create [app] --port <n>        Set the host port"
 gum style --foreground 240 "  create [app] --image <image>   Set the Docker image"
 gum style --foreground 240 "  expose [app] --public          Expose publicly via Tailscale Funnel + custom domain"
